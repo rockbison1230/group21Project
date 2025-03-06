@@ -15,11 +15,16 @@ async function connectDB()
 {
   try {
     await client.connect();
-    console.log('Connected to MongoDB');
-    const db = client.db(); // Use the default database connection
-    const collections = await db.listCollections().toArray();
-    console.log('Available collections:', collections); // Logs all collections in the database
-    
+        console.log('Connected to MongoDB');
+
+        // Access the database (EventManager)
+        const db = client.db('EventManager');
+        console.log('Currently connected to the database:', db.databaseName);
+
+        // List available collections in the connected database
+        const collections = await db.listCollections().toArray();
+        console.log('Available collections in the database:', collections.map(collection => collection.name));
+
     // Optionally, verify the 'Users' collection exists
     if (!collections.some(collection => collection.name === 'Users')) {
       console.log('Users collection not found');
