@@ -38,20 +38,78 @@ async function connectDB()
 }
 connectDB();
 
+app.post('/api/register', async (req, res, next) => {
+  // Incoming: firstName, lastName, userName, emailAddress, password
+  // Outgoing: id, firstName, lastName, userName, emailAddress, password, error
+  console.log('Request data: ', req.body);
+
+  let error = '';
+  const { firstName, lastName, userName, emailAddress, password } = req.body;
+
+  // Validate incoming data
+  if (!firstName || !lastName || !userName || !emailAddress || !password) {
+      error = 'All fields are required.';
+      return res.status(400).json({ id: -1, firstName: '', lastName: '', emailAddress: '', error });
+  }
+
+  try {
+      const db = client.db(); // Ensure `client` is properly initialized (MongoDB client)
+      const usersCollection = db.collection('Users');
+
+      // Check if the email already exists
+      const existingUser = await usersCollection.findOne({Email:emailAddress});
+      if (existingUser) {
+          error = 'Email already exists.';
+          return res.status(400).json({ id: -1, firstName: '', lastName: '', emailAddress: '', error });
+      }
+
+      // Insert the new user into the database
+      const newUser = {
+          FirstName: firstName,
+          LastName: lastName,
+          Username: userName,
+          Password: password,
+          Email: emailAddress,
+      };
+
+      const result = await usersCollection.insertOne(newUser);
+
+      // Return the response
+      const ret = {
+          id: result.insertedId, // MongoDB's generated ID
+          firstName,
+          lastName,
+          userName,
+          password,
+          emailAddress,
+          error: '',
+      };
+
+      res.status(200).json(ret);
+  } catch (err) {
+      console.error('Error during registration:', err);
+      error = 'An error occurred during registration.';
+      res.status(500).json({ id: -1, firstName: '', lastName: '', emailAddress: '', error });
+  }
+});
+
 app.post('/api/login', async (req, res, next) =>
   {
     // incoming: login, password
     // outgoing: id, firstName, lastName, email, error
     console.log('Request data: ', req.body);
+    
     var error = '';
     const { login, password } = req.body;
     const db = client.db();
-    const results = await
-    db.collection('Users').find({Username:login, Password:password}).toArray();
+    const results = await db.collection('Users').find({ Username: login, Password: password }).toArray();
+    const user = await db.collection('Users').findOne({ Username: login });
+console.log('User found:', user);
     var id = -1;
     var fn = '';
     var ln = '';
     var email = '';
+    console.log(results.length);
     if( results.length > 0 )
     {
       id = results[0]._id;
