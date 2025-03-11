@@ -23,7 +23,6 @@ function Register() {
   async function doRegister(event: any): Promise<void> {
     event.preventDefault();
 
-    // Check if passwords match
     if (loginPassword !== confirmPassword) {
       setMessage('Passwords do not match');
       return;

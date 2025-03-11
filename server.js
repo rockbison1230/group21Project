@@ -43,14 +43,13 @@ app.get("/", (req, res) => {
 });
 
 app.post("/api/register", async (req, res, next) => {
-  // Incoming: firstName, lastName, userName, emailAddress, password
-  // Outgoing: id, firstName, lastName, userName, emailAddress, password, error
+  // incoming: firstName, lastName, userName, emailAddress, password
+  // outgoing: id, firstName, lastName, userName, emailAddress, password, error
   console.log("Request data: ", req.body);
 
   let error = "";
   const { firstName, lastName, userName, emailAddress, password } = req.body;
 
-  // Validate incoming data
   if (!firstName || !lastName || !userName || !emailAddress || !password) {
     error = "All fields are required.";
     return res
@@ -59,10 +58,9 @@ app.post("/api/register", async (req, res, next) => {
   }
 
   try {
-    const db = client.db(); // Ensure `client` is properly initialized (MongoDB client)
+    const db = client.db();
     const usersCollection = db.collection("Users");
 
-    // Check if the email already exists
     const existingUser = await usersCollection.findOne({ Email: emailAddress });
     if (existingUser) {
       error = "Email already exists.";
@@ -71,7 +69,7 @@ app.post("/api/register", async (req, res, next) => {
         .json({ id: -1, firstName: "", lastName: "", emailAddress: "", error });
     }
 
-    // Insert the new user into the database
+    // add new user
     const newUser = {
       FirstName: firstName,
       LastName: lastName,
@@ -82,9 +80,8 @@ app.post("/api/register", async (req, res, next) => {
 
     const result = await usersCollection.insertOne(newUser);
 
-    // Return the response
     const ret = {
-      id: result.insertedId, // MongoDB's generated ID
+      id: result.insertedId,
       firstName,
       lastName,
       userName,
@@ -182,4 +179,5 @@ app.use((req, res, next) => {
   next();
 });
 
-app.listen(5001); // start Node + Express server on port 5000
+app.listen(5001); // start Node + Express server on port 5000. port 5000 is occupied on my computer so it's port 5001 here, but just
+//cahnge all occurences of 5001 to 5000 for ur own testing if you want
