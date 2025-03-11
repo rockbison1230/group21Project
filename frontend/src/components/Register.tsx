@@ -4,10 +4,10 @@ const app_name = '167.172.31.171';
 
 function buildPath(route: string): string {
   if (import.meta.env.MODE != 'development') {
-    return 'http://' + app_name + ':5000/' + route;
+    return 'http://' + app_name + ':5001/' + route;
   }
   else {
-    return 'http://localhost:5000/' + route;
+    return 'http://localhost:5001/' + route;
   }
 }
 
@@ -30,12 +30,12 @@ function Register() {
     }
 
     var obj = {
-      firstName: firstName,
-      lastName: lastName,
-      login: loginName,
-      email: email,
-      password: loginPassword
-    };
+        firstName: firstName,
+        lastName: lastName,
+        userName: loginName,  
+        emailAddress: email,  
+        password: loginPassword
+      };
     var js = JSON.stringify(obj);
 
     try {

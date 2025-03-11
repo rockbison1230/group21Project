@@ -5,11 +5,11 @@ function buildPath(route:string) : string
 {
     if (import.meta.env.MODE != 'development') 
     {
-        return 'http://' + app_name + ':5000/' + route;
+        return 'http://' + app_name + ':5001/' + route;
     }
     else
     {        
-        return 'http://localhost:5000/' + route;
+        return 'http://localhost:5001/' + route;
     }
 }
 
