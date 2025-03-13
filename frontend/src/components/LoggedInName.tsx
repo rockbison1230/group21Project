@@ -5,7 +5,7 @@ function LoggedInName()
         return <div id = "loggedInDiv">Not Logged In</div>;
     
     var ud = JSON.parse(_ud);
-    var userId = ud.id;
+    //var userId = ud.id;
     var firstName = ud.firstName;
     var lastName = ud.lastName;
     const doLogout = (event: React.MouseEvent<HTMLButtonElement>) =>
@@ -17,7 +17,7 @@ function LoggedInName()
 
     return(
         <div id="loggedInDiv">
-        <span id="userName">Logged In As {firstName} {lastName} {userId} </span><br />
+        <span id="userName">Logged In As {firstName} {lastName} </span><br />
         <button type="button" id="logoutButton" className ="buttons"
             onClick={doLogout}> 
                 Log Out 
