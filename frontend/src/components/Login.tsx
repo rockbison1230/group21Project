@@ -1,4 +1,5 @@
-import React, {useState} from 'react'
+import React, { useState } from 'react';
+import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 
 const app_name = '167.172.31.171';
 function buildPath(route:string) : string
@@ -59,29 +60,53 @@ function Login()
         }    
       };
 
-
-    function handleSetLoginName( e: any ) : void
-    {
-        setLoginName( e.target.value );
-    }
-
-    function handleSetPassword( e: any ) : void
-    {
-        setPassword( e.target.value );
-    }
-
-    return(
-        <div id="loginDiv">
-            <span id="inner-title">PLEASE LOG IN</span><br />
-            Login: <input type="text" id="loginName" placeholder="Username"
-                onChange={handleSetLoginName} />
-            Password: <input type="password" id="loginPassword" placeholder="Password"
-                onChange={handleSetPassword} />
-            <input type="submit" id="loginButton" className="buttons" value = "Do It"
-                onClick={doLogin} />
-            <span id="loginResult">{message}</span>
-        </div>
+    return (
+        <View style={styles.container}>
+            <Text style={styles.title}>PLEASE LOG IN</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="Username"
+                value={loginName}
+                onChangeText={setLoginName}
+            />
+            <TextInput
+                style={styles.input}
+                placeholder="Password"
+                secureTextEntry={true}
+                value={loginPassword}
+                onChangeText={setPassword}
+            />
+            <Button title="Do It" onPress={doLogin} />
+            {message ? <Text style={styles.message}>{message}</Text> : null}
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        padding: 20,
+        justifyContent: 'center',
+        // You can add additional styling here
+    },
+    title: {
+        fontSize: 24,
+        marginBottom: 20,
+        textAlign: 'center'
+    },
+    input: {
+        height: 40,
+        borderColor: 'gray',
+        borderWidth: 1,
+        marginBottom: 15,
+        paddingHorizontal: 10,
+    },
+    message: {
+        marginTop: 15,
+        textAlign: 'center',
+        color: 'red'
+    },
+});
+
 
 export default Login;

@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
+import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 
 const app_name = '167.172.31.171';
 
@@ -20,8 +21,7 @@ function Register() {
   const [loginPassword, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
 
-  async function doRegister(event: any): Promise<void> {
-    event.preventDefault();
+  async function doRegister(): Promise<void> {
 
     if (loginPassword !== confirmPassword) {
       setMessage('Passwords do not match');
@@ -63,53 +63,91 @@ function Register() {
     }
   };
 
-  function handleSetFirstName(e: any): void {
-    setFirstName(e.target.value);
-  }
-
-  function handleSetLastName(e: any): void {
-    setLastName(e.target.value);
-  }
-
-  function handleSetLoginName(e: any): void {
-    setLoginName(e.target.value);
-  }
-
-  function handleSetEmail(e: any): void {
-    setEmail(e.target.value);
-  }
-
-  function handleSetPassword(e: any): void {
-    setPassword(e.target.value);
-  }
-
-  function handleSetConfirmPassword(e: any): void {
-    setConfirmPassword(e.target.value);
-  }
-
-  return (
-    <div id="registerDiv">
-      <span id="inner-title">REGISTER</span><br />
-      First Name: <input type="text" id="firstName" placeholder="First Name"
-        onChange={handleSetFirstName} /><br />
-      Last Name: <input type="text" id="lastName" placeholder="Last Name"
-        onChange={handleSetLastName} /><br />
-      Login: <input type="text" id="loginName" placeholder="Username"
-        onChange={handleSetLoginName} /><br />
-      Email: <input type="text" id="email" placeholder="Email"
-        onChange={handleSetEmail} /><br />
-      Password: <input type="password" id="loginPassword" placeholder="Password"
-        onChange={handleSetPassword} /><br />
-      Confirm Password: <input type="password" id="confirmPassword" placeholder="Confirm Password"
-        onChange={handleSetConfirmPassword} /><br />
-      <input type="submit" id="registerButton" className="buttons" value="Register"
-        onClick={doRegister} />
-      <span id="registerResult">{message}</span>
-      <p>
-        Already have an account? <a href="/">Login</a>
-      </p>
-    </div>
-  );
+    return (
+        <View style={styles.container}>
+            <Text style={styles.title}>REGISTER</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="First Name"
+                value={firstName}
+                onChangeText={setFirstName}
+            />
+            <TextInput
+                style={styles.input}
+                placeholder="Last Name"
+                value={lastName}
+                onChangeText={setLastName}
+            />
+            <TextInput
+                style={styles.input}
+                placeholder="Username"
+                value={loginName}
+                onChangeText={setLoginName}
+            />
+            <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+            />
+            <TextInput
+                style={styles.input}
+                placeholder="Password"
+                secureTextEntry={true}
+                value={loginPassword}
+                onChangeText={setPassword}
+            />
+            <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                secureTextEntry={true}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+            />
+            <Button title="Register" onPress={doRegister} />
+            {message ? <Text style={styles.message}>{message}</Text> : null}
+            <Text style={styles.footer}>
+                Already have an account?{' '}
+                <Text style={styles.link} onPress={() => (window.location.href = '/')}>
+                    Login here
+                </Text>
+            </Text>
+        </View>
+    );
 }
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        padding: 20,
+        justifyContent: 'center',
+    },
+    title: {
+        fontSize: 28,
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    input: {
+        height: 40,
+        borderColor: 'gray',
+        borderWidth: 1,
+        marginBottom: 15,
+        paddingHorizontal: 10,
+    },
+    message: {
+        marginTop: 15,
+        textAlign: 'center',
+        color: 'red',
+    },
+    footer: {
+        marginTop: 20,
+        textAlign: 'center',
+    },
+    link: {
+        color: 'blue',
+        textDecorationLine: 'underline',
+    },
+});
+
 
 export default Register;
