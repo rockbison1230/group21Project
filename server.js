@@ -132,39 +132,51 @@ app.post("/api/login", async (req, res, next) => {
   res.status(200).json(ret);
 });
 
-app.post("/api/addcard", async (req, res, next) => {
-  // incoming: userId, color
-  // outgoing: error
+app.post("/api/searchContacts", async (req, res, next) => {
+  // incoming: eventID, search - search is partial match for firstName, lastName, or phone
+  // outgoing: 
+  const { eventID, search } = req.body;
+  let error = "";
 
-  var error = "";
+  if (!eventID || !search) {
+    error = "Missing eventID or search term.";
+    return res.status(400).json({ results: [], error });
+  }
 
-  const { userId, card } = req.body;
+  try {
+    const db = client.db();
+    const guestsCollection = db.collection("Guests");
 
-  // TEMP FOR LOCAL TESTING.
-  cardList.push(card);
+    const regex = new RegExp(search, "i"); // case-insensitive partial match
 
-  var ret = { error: error };
-  res.status(200).json(ret);
+    const results = await guestsCollection
+      .find({
+        EventID: eventID,
+        $or: [
+          { FirstName: regex },
+          { LastName: regex },
+          { Phone: regex },
+        ],
+      })
+      .toArray();
+
+    const contacts = results.map((guest) => ({
+      id: guest._id,
+      eventID: guest.EventID,
+      firstName: guest.FirstName,
+      lastName: guest.LastName,
+      phone: guest.Phone,
+      status: guest.Status,
+    }));
+
+    res.status(200).json({ results: contacts, error: "" });
+  } catch (err) {
+    console.error("Error searching contacts:", err);
+    error = "An error occurred while searching contacts.";
+    res.status(500).json({ results: [], error });
+  }
 });
 
-app.post("/api/searchcards", async (req, res, next) => {
-  // incoming: userId, search
-  // outgoing: results[], error
-  // var error = '';
-  // const { userId, search } = req.body;
-  // var _search = search.toLowerCase().trim();
-  // var _ret = [];
-  // for( var i=0; i<cardList.length; i++ )
-  // {
-  //   var lowerFromList = cardList[i].toLocaleLowerCase();
-  //   if( lowerFromList.indexOf( _search ) >= 0 )
-  //   {
-  //     _ret.push( cardList[i] );
-  //   }
-  // }
-  // var ret = {results:_ret, error:''};
-  // res.status(200).json(ret);
-});
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
