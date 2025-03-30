@@ -108,8 +108,8 @@ function Register() {
             {message ? <Text style={styles.message}>{message}</Text> : null}
             <Text style={styles.footer}>
                 Already have an account?{' '}
-                <Text style={styles.link} onPress={() => (window.location.href = '/')}>
-                    Login here
+                <Text style={styles.link} onPress={() => (window.location.href = '/login')}>
+                    Login
                 </Text>
             </Text>
         </View>
