@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const { ObjectId } = require("mongodb");
 const app = express();
 
 app.use(cors());
@@ -15,7 +16,127 @@ async function connectDB() {
     await client.connect();
     console.log("Connected to MongoDB");
 
-    // Access the database (EventManager)
+    // Send invitation to contact
+app.post("/api/sendInvitation", async (req, res) => {
+  // incoming: contactId
+  // outgoing: success message or error
+  console.log("Sending invitation to contact: ", req.body);
+
+  const { contactId } = req.body;
+  let error = "";
+
+  if (!contactId) {
+    error = "Contact ID is required.";
+    return res.status(400).json({ success: false, error });
+  }
+
+  try {
+    const db = client.db();
+    const contactsCollection = db.collection("Contacts");
+
+    // Get the contact
+    const contact = await contactsCollection.findOne({
+      _id: new ObjectId(contactId),
+    });
+
+    if (!contact) {
+      error = "Contact not found.";
+      return res.status(404).json({ success: false, error });
+    }
+
+    // Get the event
+    const eventsCollection = db.collection("Events");
+    const event = await eventsCollection.findOne({
+      _id: new ObjectId(contact.EventId),
+    });
+
+    if (!event) {
+      error = "Event not found.";
+      return res.status(404).json({ success: false, error });
+    }
+
+    // In a real application, you would send an email here
+    console.log(`Sending invitation to ${contact.Email} for event ${event.Title}`);
+
+    // Update contact status to 'invited'
+    await contactsCollection.updateOne(
+      { _id: new ObjectId(contactId) },
+      {
+        $set: {
+          Status: "invited",
+          InvitedAt: new Date(),
+        },
+      }
+    );
+
+    res.status(200).json({ success: true, error: "" });
+  } catch (err) {
+    console.error("Error sending invitation:", err);
+    error = "An error occurred while sending the invitation.";
+    res.status(500).json({ success: false, error });
+  }
+});
+
+// Search contacts
+app.post("/api/searchContacts", async (req, res, next) => {
+  // incoming: eventId, search - search is partial match for firstName, lastName, or email
+  // outgoing: results array or error
+  const { eventId, search } = req.body;
+  let error = "";
+
+  if (!eventId || !search) {
+    error = "Missing eventId or search term.";
+    return res.status(400).json({ results: [], error });
+  }
+
+  try {
+    const db = client.db();
+    const contactsCollection = db.collection("Contacts");
+
+    const regex = new RegExp(search, "i"); // case-insensitive partial match
+
+    const results = await contactsCollection
+      .find({
+        EventId: eventId.toString(),
+        $or: [
+          { FirstName: regex },
+          { LastName: regex },
+          { Email: regex },
+        ],
+      })
+      .toArray();
+
+    const contacts = results.map((contact) => ({
+      id: contact._id,
+      eventId: contact.EventId,
+      name: `${contact.FirstName} ${contact.LastName}`.trim(),
+      email: contact.Email,
+      status: contact.Status || "pending",
+    }));
+
+    res.status(200).json({ results: contacts, error: "" });
+  } catch (err) {
+    console.error("Error searching contacts:", err);
+    error = "An error occurred while searching contacts.";
+    res.status(500).json({ results: [], error });
+  }
+});
+
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PATCH, DELETE, OPTIONS"
+  );
+  next();
+});
+
+app.listen(5001); // start Node + Express server on port 5000. port 5000 is occupied on my computer so it's port 5001 here, but just
+//change all occurrences of 5001 to 5000 for your own testing if you want Access the database (EventManager)
     const db = client.db("EventManager");
     console.log("Currently connected to the database:", db.databaseName);
 
@@ -32,7 +153,23 @@ async function connectDB() {
     } else {
       console.log("Users collection found");
     }
-  } catch {
+
+    // Create Events collection if it doesn't exist
+    if (!collections.some((collection) => collection.name === "Events")) {
+      await db.createCollection("Events");
+      console.log("Events collection created");
+    } else {
+      console.log("Events collection found");
+    }
+
+    // Create Contacts collection if it doesn't exist
+    if (!collections.some((collection) => collection.name === "Contacts")) {
+      await db.createCollection("Contacts");
+      console.log("Contacts collection created");
+    } else {
+      console.log("Contacts collection found");
+    }
+  } catch (error) {
     console.error("Error connecting to MongoDB:", error);
   }
 }
@@ -99,10 +236,12 @@ app.post("/api/register", async (req, res, next) => {
       .json({ id: -1, firstName: "", lastName: "", emailAddress: "", error });
   }
 });
+
 app.get("/api/login", (req, res) => {
   // Handle GET requests to /api/login
   res.status(200).json({ message: "Login page" });
 });
+
 app.post("/api/login", async (req, res, next) => {
   // incoming: login, password
   // outgoing: id, firstName, lastName, email, error
@@ -132,64 +271,323 @@ app.post("/api/login", async (req, res, next) => {
   res.status(200).json(ret);
 });
 
-app.post("/api/searchContacts", async (req, res, next) => {
-  // incoming: eventID, search - search is partial match for firstName, lastName, or phone
-  // outgoing: 
-  const { eventID, search } = req.body;
+// Get user events
+app.post("/api/getUserEvents", async (req, res) => {
+  // incoming: userId
+  // outgoing: events array or error
+  console.log("Getting events for user: ", req.body);
+
+  const { userId } = req.body;
   let error = "";
 
-  if (!eventID || !search) {
-    error = "Missing eventID or search term.";
-    return res.status(400).json({ results: [], error });
+  if (!userId) {
+    error = "User ID is required.";
+    return res.status(400).json({ events: [], error });
   }
 
   try {
     const db = client.db();
-    const guestsCollection = db.collection("Guests");
+    const eventsCollection = db.collection("Events");
 
-    const regex = new RegExp(search, "i"); // case-insensitive partial match
-
-    const results = await guestsCollection
-      .find({
-        EventID: eventID,
-        $or: [
-          { FirstName: regex },
-          { LastName: regex },
-          { Phone: regex },
-        ],
-      })
+    // Find all events for this user
+    const events = await eventsCollection
+      .find({ UserId: userId.toString() })
       .toArray();
 
-    const contacts = results.map((guest) => ({
-      id: guest._id,
-      eventID: guest.EventID,
-      firstName: guest.FirstName,
-      lastName: guest.LastName,
-      phone: guest.Phone,
-      status: guest.Status,
-    }));
+    // For each event, get its contacts
+    const eventsWithContacts = await Promise.all(
+      events.map(async (event) => {
+        const contactsCollection = db.collection("Contacts");
+        const contacts = await contactsCollection
+          .find({ EventId: event._id.toString() })
+          .toArray();
 
-    res.status(200).json({ results: contacts, error: "" });
+        // Format contacts for the frontend
+        const formattedContacts = contacts.map((contact) => ({
+          id: contact._id,
+          name: `${contact.FirstName} ${contact.LastName}`,
+          email: contact.Email,
+          attending: contact.Status || "pending",
+        }));
+
+        return {
+          ...event,
+          Contacts: formattedContacts,
+        };
+      })
+    );
+
+    res.status(200).json({ events: eventsWithContacts, error: "" });
   } catch (err) {
-    console.error("Error searching contacts:", err);
-    error = "An error occurred while searching contacts.";
-    res.status(500).json({ results: [], error });
+    console.error("Error fetching events:", err);
+    error = "An error occurred while fetching events.";
+    res.status(500).json({ events: [], error });
   }
 });
 
+// Add new event
+app.post("/api/addEvent", async (req, res) => {
+  // incoming: userId, title, date, time, location, image (optional), description (optional)
+  // outgoing: eventId or error
+  console.log("Adding new event: ", req.body);
 
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  );
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PATCH, DELETE, OPTIONS"
-  );
-  next();
+  const { userId, title, date, time, location, image, description } = req.body;
+  let error = "";
+
+  if (!userId || !title || !date || !time || !location) {
+    error = "Required fields missing.";
+    return res.status(400).json({ eventId: -1, error });
+  }
+
+  try {
+    const db = client.db();
+    const eventsCollection = db.collection("Events");
+
+    // Create new event
+    const newEvent = {
+      UserId: userId.toString(),
+      Title: title,
+      Date: date,
+      Time: time,
+      Location: location,
+      Image: image || "📅",
+      Description: description || "",
+      CreatedAt: new Date(),
+    };
+
+    const result = await eventsCollection.insertOne(newEvent);
+
+    res.status(200).json({ eventId: result.insertedId, error: "" });
+  } catch (err) {
+    console.error("Error adding event:", err);
+    error = "An error occurred while adding the event.";
+    res.status(500).json({ eventId: -1, error });
+  }
 });
 
-app.listen(5001); // start Node + Express server on port 5000. port 5000 is occupied on my computer so it's port 5001 here, but just
-//cahnge all occurences of 5001 to 5000 for ur own testing if you want
+// Update event
+app.post("/api/updateEvent", async (req, res) => {
+  // incoming: eventId, title, date, time, location, image, description
+  // outgoing: success message or error
+  console.log("Updating event: ", req.body);
+
+  const { eventId, title, date, time, location, image, description } = req.body;
+  let error = "";
+
+  if (!eventId || !title || !date || !time || !location) {
+    error = "Required fields missing.";
+    return res.status(400).json({ success: false, error });
+  }
+
+  try {
+    const db = client.db();
+    const eventsCollection = db.collection("Events");
+
+    // Update the event
+    const updateResult = await eventsCollection.updateOne(
+      { _id: new ObjectId(eventId) },
+      {
+        $set: {
+          Title: title,
+          Date: date,
+          Time: time,
+          Location: location,
+          Image: image || "📅",
+          Description: description || "",
+          UpdatedAt: new Date(),
+        },
+      }
+    );
+
+    if (updateResult.matchedCount === 0) {
+      error = "Event not found.";
+      return res.status(404).json({ success: false, error });
+    }
+
+    res.status(200).json({ success: true, error: "" });
+  } catch (err) {
+    console.error("Error updating event:", err);
+    error = "An error occurred while updating the event.";
+    res.status(500).json({ success: false, error });
+  }
+});
+
+// Delete event
+app.post("/api/deleteEvent", async (req, res) => {
+  // incoming: eventId
+  // outgoing: success message or error
+  console.log("Deleting event: ", req.body);
+
+  const { eventId } = req.body;
+  let error = "";
+
+  if (!eventId) {
+    error = "Event ID is required.";
+    return res.status(400).json({ success: false, error });
+  }
+
+  try {
+    const db = client.db();
+    const eventsCollection = db.collection("Events");
+    const contactsCollection = db.collection("Contacts");
+
+    // Delete the event
+    const deleteResult = await eventsCollection.deleteOne({
+      _id: new ObjectId(eventId),
+    });
+
+    if (deleteResult.deletedCount === 0) {
+      error = "Event not found.";
+      return res.status(404).json({ success: false, error });
+    }
+
+    // Delete all contacts associated with this event
+    await contactsCollection.deleteMany({ EventId: eventId.toString() });
+
+    res.status(200).json({ success: true, error: "" });
+  } catch (err) {
+    console.error("Error deleting event:", err);
+    error = "An error occurred while deleting the event.";
+    res.status(500).json({ success: false, error });
+  }
+});
+
+// Add contact to event
+app.post("/api/addContact", async (req, res) => {
+  // incoming: eventId, firstName, lastName, email, status
+  // outgoing: contactId or error
+  console.log("Adding contact: ", req.body);
+
+  const { eventId, firstName, lastName, email, status } = req.body;
+  let error = "";
+
+  if (!eventId || !firstName || !email) {
+    error = "Required fields missing.";
+    return res.status(400).json({ contactId: -1, error });
+  }
+
+  try {
+    const db = client.db();
+    const contactsCollection = db.collection("Contacts");
+
+    // Check if the event exists
+    const eventsCollection = db.collection("Events");
+    const event = await eventsCollection.findOne({
+      _id: new ObjectId(eventId),
+    });
+
+    if (!event) {
+      error = "Event not found.";
+      return res.status(404).json({ contactId: -1, error });
+    }
+
+    // Check if contact already exists for this event
+    const existingContact = await contactsCollection.findOne({
+      EventId: eventId.toString(),
+      Email: email,
+    });
+
+    if (existingContact) {
+      error = "Contact with this email already exists for this event.";
+      return res.status(400).json({ contactId: -1, error });
+    }
+
+    // Create new contact
+    const newContact = {
+      EventId: eventId.toString(),
+      FirstName: firstName,
+      LastName: lastName || "",
+      Email: email,
+      Status: status || "pending",
+      CreatedAt: new Date(),
+    };
+
+    const result = await contactsCollection.insertOne(newContact);
+
+    res.status(200).json({ contactId: result.insertedId, error: "" });
+  } catch (err) {
+    console.error("Error adding contact:", err);
+    error = "An error occurred while adding the contact.";
+    res.status(500).json({ contactId: -1, error });
+  }
+});
+
+// Update contact status
+app.post("/api/updateContactStatus", async (req, res) => {
+  // incoming: contactId, status
+  // outgoing: success message or error
+  console.log("Updating contact status: ", req.body);
+
+  const { contactId, status } = req.body;
+  let error = "";
+
+  if (!contactId || !status) {
+    error = "Contact ID and status are required.";
+    return res.status(400).json({ success: false, error });
+  }
+
+  try {
+    const db = client.db();
+    const contactsCollection = db.collection("Contacts");
+
+    // Update contact status
+    const updateResult = await contactsCollection.updateOne(
+      { _id: new ObjectId(contactId) },
+      {
+        $set: {
+          Status: status,
+          UpdatedAt: new Date(),
+        },
+      }
+    );
+
+    if (updateResult.matchedCount === 0) {
+      error = "Contact not found.";
+      return res.status(404).json({ success: false, error });
+    }
+
+    res.status(200).json({ success: true, error: "" });
+  } catch (err) {
+    console.error("Error updating contact status:", err);
+    error = "An error occurred while updating the contact status.";
+    res.status(500).json({ success: false, error });
+  }
+});
+
+// Delete contact
+app.post("/api/deleteContact", async (req, res) => {
+  // incoming: contactId
+  // outgoing: success message or error
+  console.log("Deleting contact: ", req.body);
+
+  const { contactId } = req.body;
+  let error = "";
+
+  if (!contactId) {
+    error = "Contact ID is required.";
+    return res.status(400).json({ success: false, error });
+  }
+
+  try {
+    const db = client.db();
+    const contactsCollection = db.collection("Contacts");
+
+    // Delete the contact
+    const deleteResult = await contactsCollection.deleteOne({
+      _id: new ObjectId(contactId),
+    });
+
+    if (deleteResult.deletedCount === 0) {
+      error = "Contact not found.";
+      return res.status(404).json({ success: false, error });
+    }
+
+    res.status(200).json({ success: true, error: "" });
+  } catch (err) {
+    console.error("Error deleting contact:", err);
+    error = "An error occurred while deleting the contact.";
+    res.status(500).json({ success: false, error });
+  }
+});
+
+//

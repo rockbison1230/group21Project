@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
 import Navbar from '../components/Navbar';
@@ -10,7 +10,7 @@ function Landing() {
   React.useEffect(() => {
     const user = localStorage.getItem('user_data');
     if (user) {
-      navigate('/cards');
+      navigate('/dashboard');
     }
   }, []);
 
