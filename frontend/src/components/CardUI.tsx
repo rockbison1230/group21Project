@@ -1,4 +1,5 @@
-import React, {useState} from 'react';
+import * as React from 'react';
+import {  useState } from 'react';
 
 const app_name = '167.172.31.171';
 function buildPath(route:string) : string

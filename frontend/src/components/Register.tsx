@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import * as React from 'react';
+import { useState } from 'react';
 
 const app_name = '167.172.31.171';
 
@@ -22,19 +22,18 @@ function Register() {
   const [confirmPassword, setConfirmPassword] = React.useState('');
 
   async function doRegister(): Promise<void> {
-
     if (loginPassword !== confirmPassword) {
       setMessage('Passwords do not match');
       return;
     }
 
     var obj = {
-        firstName: firstName,
-        lastName: lastName,
-        userName: loginName,  
-        emailAddress: email,  
-        password: loginPassword
-      };
+      firstName: firstName,
+      lastName: lastName,
+      userName: loginName,
+      emailAddress: email,
+      password: loginPassword
+    };
     var js = JSON.stringify(obj);
 
     try {
@@ -63,91 +62,110 @@ function Register() {
     }
   };
 
-    return (
-        <View style={styles.container}>
-            <Text style={styles.title}>REGISTER</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="First Name"
-                value={firstName}
-                onChangeText={setFirstName}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Last Name"
-                value={lastName}
-                onChangeText={setLastName}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Username"
-                value={loginName}
-                onChangeText={setLoginName}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Password"
-                secureTextEntry={true}
-                value={loginPassword}
-                onChangeText={setPassword}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Confirm Password"
-                secureTextEntry={true}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-            />
-            <Button title="Register" onPress={doRegister} />
-            {message ? <Text style={styles.message}>{message}</Text> : null}
-            <Text style={styles.footer}>
-                Already have an account?{' '}
-                <Text style={styles.link} onPress={() => (window.location.href = '/login')}>
-                    Login
-                </Text>
-            </Text>
-        </View>
-    );
+  return (
+    <div style={styles.container}>
+      <h2 style={styles.title}>REGISTER</h2>
+      <input
+        style={styles.input}
+        placeholder="First Name"
+        value={firstName}
+        onChange={(e) => setFirstName(e.target.value)}
+      />
+      <input
+        style={styles.input}
+        placeholder="Last Name"
+        value={lastName}
+        onChange={(e) => setLastName(e.target.value)}
+      />
+      <input
+        style={styles.input}
+        placeholder="Username"
+        value={loginName}
+        onChange={(e) => setLoginName(e.target.value)}
+      />
+      <input
+        style={styles.input}
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <input
+        style={styles.input}
+        placeholder="Password"
+        type="password"
+        value={loginPassword}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <input
+        style={styles.input}
+        placeholder="Confirm Password"
+        type="password"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+      />
+      <button style={styles.button} onClick={doRegister}>Register</button>
+      {message ? <p style={styles.message}>{message}</p> : null}
+      <p style={styles.footer}>
+        Already have an account?{' '}
+        <span style={styles.link} onClick={() => (window.location.href = '/login')}>
+          Login
+        </span>
+      </p>
+    </div>
+  );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 20,
-        justifyContent: 'center',
-    },
-    title: {
-        fontSize: 28,
-        marginBottom: 20,
-        textAlign: 'center',
-    },
-    input: {
-        height: 40,
-        borderColor: 'gray',
-        borderWidth: 1,
-        marginBottom: 15,
-        paddingHorizontal: 10,
-    },
-    message: {
-        marginTop: 15,
-        textAlign: 'center',
-        color: 'red',
-    },
-    footer: {
-        marginTop: 20,
-        textAlign: 'center',
-    },
-    link: {
-        color: 'blue',
-        textDecorationLine: 'underline',
-    },
-});
-
+const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    padding: '20px',
+    alignItems: 'center',
+    justifyContent: 'center',
+    maxWidth: '400px',
+    margin: '0 auto',
+    marginTop: '50px'
+  },
+  title: {
+    fontSize: '28px',
+    marginBottom: '20px',
+    textAlign: 'center'
+  },
+  input: {
+    height: '40px',
+    width: '100%',
+    border: '1px solid gray',
+    borderRadius: '4px',
+    marginBottom: '15px',
+    padding: '0 10px',
+    fontSize: '16px'
+  },
+  button: {
+    backgroundColor: '#4CAF50',
+    border: 'none',
+    color: 'white',
+    padding: '10px 15px',
+    textAlign: 'center',
+    fontSize: '16px',
+    marginTop: '10px',
+    cursor: 'pointer',
+    borderRadius: '4px',
+    width: '100%'
+  },
+  message: {
+    marginTop: '15px',
+    textAlign: 'center',
+    color: 'red'
+  },
+  footer: {
+    marginTop: '20px',
+    textAlign: 'center'
+  },
+  link: {
+    color: 'blue',
+    textDecoration: 'underline',
+    cursor: 'pointer'
+  }
+} as const;
 
 export default Register;

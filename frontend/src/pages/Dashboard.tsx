@@ -43,7 +43,7 @@ function Dashboard() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [contactSearchTerm, setContactSearchTerm] = useState('');
+  const [contactSearchTerm] = useState('');
   const [newContact, setNewContact] = useState({ name: '', email: '' });
   const [showAddContactForm, setShowAddContactForm] = useState(false);
   const [userData, setUserData] = useState<any>(null);
