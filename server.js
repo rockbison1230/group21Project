@@ -371,51 +371,56 @@ app.post("/api/updateEvent", async (req, res) => {
 //   }
 // });
 
-// Search contacts
+// Search contacts - testing
 app.post("/api/searchContacts", async (req, res, next) => {
-  // incoming: eventId, search - search is partial match for firstName, lastName, or email
-  // outgoing: results array or error
   const { eventId, search } = req.body;
-  let error = "";
-  
-  if (!eventId || !search) 
-  {
-    error = "Missing eventId or search term.";
-    return res.status(400).json({ results: [], error });
+
+  console.log("Received request:", { eventId, search });
+
+  if (!eventId) {
+    console.error("Error: Missing eventId.");
+    return res.status(400).json({ results: [], error: "Missing eventId." });
   }
-  
+
   try {
     const db = client.db();
+
+    // Access Guests collection
     const contactsCollection = db.collection("Guests");
-  
-    const regex = new RegExp(search, "i"); // case-insensitive partial match
-  
-    const results = await contactsCollection
-      .find(
-        {
-          EventID: new ObjectId(eventId), // fix: convert to ObjectId - typecast as String
-          $or: [
-            { FirstName: regex },
-            { LastName: regex },
-            { Phone: regex },
-          ],
-        })
-        .toArray();
-  
-      const contacts = results.map((contact) => ({
-        id: contact._id,
-        eventId: contact.EventID,
-        name: `${contact.FirstName} ${contact.LastName}`.trim(),
-        phone: contact.Phone || "",
-        status: contact.Status || "pending",
-      }));
-  
-      res.status(200).json({ results: contacts, error: "" });
-    } catch (err) {
-      console.error("Error searching contacts:", err);
-      error = "An error occurred while searching contacts.";
-      res.status(500).json({ results: [], error });
+
+    let eventIdQuery;
+    if (ObjectId.isValid(eventId)) {
+      eventIdQuery = new ObjectId(eventId);
+    } else {
+      eventIdQuery = eventId;
     }
+
+    const eventIdString = `ObjectId('${eventId}')`;
+
+    // Modify query to return all guests under the eventId if search is empty
+    const query = {
+      EventID: { $in: [eventIdQuery, eventId, eventIdString] },
+      ...(search ? { $or: [
+        { FirstName: new RegExp(search, "i") },
+        { LastName: new RegExp(search, "i") },
+        { Phone: new RegExp(search, "i") },
+      ] } : {})
+    };
+
+    const results = await contactsCollection.find(query).toArray();
+
+    const contacts = results.map((contact) => ({
+      id: contact._id,
+      eventId: contact.EventID,
+      name: `${contact.FirstName} ${contact.LastName}`.trim(),
+      phone: contact.Phone || "",
+      status: contact.Status || "pending",
+    }));
+
+    res.status(200).json({ results: contacts, error: "" });
+  } catch (err) {
+    res.status(500).json({ results: [], error: "An error occurred while searching contacts." });
+  }
 });
 
 // // Update contact status
