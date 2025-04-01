@@ -185,91 +185,91 @@ app.post("/api/login", async (req, res, next) => {
 // });
 
 // Add new event
-app.post("/api/addEvent", async (req, res) => {
-  // incoming: userId, title, date, time, location, image (optional), description (optional)
-  // outgoing: eventId or error
-  console.log("Adding new event: ", req.body);
+// app.post("/api/addEvent", async (req, res) => {
+//   // incoming: userId, title, date, time, location, image (optional), description (optional)
+//   // outgoing: eventId or error
+//   console.log("Adding new event: ", req.body);
 
-  const { userId, title, date, time, location, image, description } = req.body;
-  let error = "";
+//   const { userId, title, date, time, location, image, description } = req.body;
+//   let error = "";
 
-  if (!userId || !title || !date || !time || !location) {
-    error = "Required fields missing.";
-    return res.status(400).json({ eventId: -1, error });
-  }
+//   if (!userId || !title || !date || !time || !location) {
+//     error = "Required fields missing.";
+//     return res.status(400).json({ eventId: -1, error });
+//   }
 
-  try {
-    const db = client.db();
-    const eventsCollection = db.collection("Events");
+//   try {
+//     const db = client.db();
+//     const eventsCollection = db.collection("Events");
 
-    // Create new event
-    const newEvent = {
-      UserId: userId.toString(),
-      Title: title,
-      Date: date,
-      Time: time,
-      Location: location,
-      Image: image || "📅" || "",
-      Description: description || "",
-      CreatedAt: new Date(),
-    };
+//     // Create new event
+//     const newEvent = {
+//       UserId: userId.toString(),
+//       Title: title,
+//       Date: date,
+//       Time: time,
+//       Location: location,
+//       Image: image || "📅" || "",
+//       Description: description || "",
+//       CreatedAt: new Date(),
+//     };
 
-    const result = await eventsCollection.insertOne(newEvent);
+//     const result = await eventsCollection.insertOne(newEvent);
 
-    res.status(200).json({ eventId: result.insertedId, error: "" });
-  } catch (err) {
-    console.error("Error adding event:", err);
-    error = "An error occurred while adding the event.";
-    res.status(500).json({ eventId: -1, error });
-  }
-});
+//     res.status(200).json({ eventId: result.insertedId, error: "" });
+//   } catch (err) {
+//     console.error("Error adding event:", err);
+//     error = "An error occurred while adding the event.";
+//     res.status(500).json({ eventId: -1, error });
+//   }
+// });
 
-// Update event
-app.post("/api/updateEvent", async (req, res) => {
-  // incoming: eventId, title, date, time, location, image, description
-  // outgoing: success message or error
-  console.log("Updating event: ", req.body);
+// // Update event
+// app.post("/api/updateEvent", async (req, res) => {
+//   // incoming: eventId, title, date, time, location, image, description
+//   // outgoing: success message or error
+//   console.log("Updating event: ", req.body);
 
-  const { eventId, title, date, time, location, image, description } = req.body;
-  let error = "";
+//   const { eventId, title, date, time, location, image, description } = req.body;
+//   let error = "";
 
-  if (!eventId || !title || !date || !time || !location) {
-    error = "Required fields missing.";
-    return res.status(400).json({ success: false, error });
-  }
+//   if (!eventId || !title || !date || !time || !location) {
+//     error = "Required fields missing.";
+//     return res.status(400).json({ success: false, error });
+//   }
 
-  try {
-    const db = client.db();
-    const eventsCollection = db.collection("Events");
+//   try {
+//     const db = client.db();
+//     const eventsCollection = db.collection("Events");
 
-    // Update the event
-    const updateResult = await eventsCollection.updateOne(
-      { _id: new ObjectId(String(eventId)) },
-      {
-        $set: {
-          Title: title,
-          Date: date,
-          Time: time,
-          Location: location,
-          Image: image || "📅" || "",
-          Description: description || "",
-          UpdatedAt: new Date(),
-        },
-      }
-    );
+//     // Update the event
+//     const updateResult = await eventsCollection.updateOne(
+//       { _id: new ObjectId(String(eventId)) },
+//       {
+//         $set: {
+//           Title: title,
+//           Date: date,
+//           Time: time,
+//           Location: location,
+//           Image: image || "📅" || "",
+//           Description: description || "",
+//           UpdatedAt: new Date(),
+//         },
+//       }
+//     );
 
-    if (updateResult.matchedCount === 0) {
-      error = "Event not found.";
-      return res.status(404).json({ success: false, error });
-    }
+//     if (updateResult.matchedCount === 0) {
+//       error = "Event not found.";
+//       return res.status(404).json({ success: false, error });
+//     }
 
-    res.status(200).json({ success: true, error: "" });
-  } catch (err) {
-    console.error("Error updating event:", err);
-    error = "An error occurred while updating the event.";
-    res.status(500).json({ success: false, error });
-  }
-});
+//     res.status(200).json({ success: true, error: "" });
+//   } catch (err) {
+//     console.error("Error updating event:", err);
+//     error = "An error occurred while updating the event.";
+//     res.status(500).json({ success: false, error });
+//   }
+// });
 
 // // Delete event
 // app.post("/api/deleteEvent", async (req, res) => {
@@ -371,7 +371,7 @@ app.post("/api/updateEvent", async (req, res) => {
 //   }
 // });
 
-// Search contacts - testing
+// Search contacts
 app.post("/api/searchContacts", async (req, res, next) => {
   const { eventId, search } = req.body;
 
@@ -423,6 +423,110 @@ app.post("/api/searchContacts", async (req, res, next) => {
   }
 });
 
+// Search Events
+app.post("/api/searchEvents", async (req, res, next) => {
+  const { hostId, search } = req.body;
+
+  console.log("Received request:", { hostId, search });
+
+  if (!hostId) {
+    console.error("Error: Missing hostId.");
+    return res.status(400).json({ results: [], error: "Missing hostId." });
+  }
+
+  try {
+    const db = client.db();
+
+    // Access Events collection
+    const eventsCollection = db.collection("Events");
+
+    let hostIdQuery;
+    if (ObjectId.isValid(hostId)) {
+      hostIdQuery = new ObjectId(hostId);
+    } else {
+      hostIdQuery = hostId;
+    }
+
+    const hostIdString = `ObjectId('${hostId}')`;
+
+    // Modify query to return all events under the hostId if search is empty
+    const query = {
+      HostID: { $in: [hostIdQuery, hostId, hostIdString] },
+      ...(search ? {
+        $or: [
+          { EventName: new RegExp(search, "i") },
+          { Location: new RegExp(search, "i") },
+          { Description: new RegExp(search, "i") },
+          { Date: new RegExp(search, "i") }, 
+        ],
+      } : {}),
+    };
+
+    const results = await eventsCollection.find(query).toArray();
+
+    const events = results.map((event) => ({
+      id: event._id,
+      hostId: event.HostID,
+      name: event.EventName,
+      date: event.Date,
+      location: event.Location,
+      description: event.Description || "",
+      image: event.Image || "",
+    }));
+
+    res.status(200).json({ results: events, error: "" });
+  } catch (err) {
+    res.status(500).json({ results: [], error: "An error occurred while searching events." });
+  }
+});
+
+
+// Delete contact
+app.post("/api/deleteContacts", async (req, res, next) => {
+  const { contactId } = req.body;
+
+  console.log("Received delete request for contact:", { contactId });
+
+  if (!contactId) {
+    console.error("Error: Missing contactId.");
+    return res.status(400).json({ success: false, error: "Missing contactId." });
+  }
+
+  try {
+    const db = client.db();
+    const contactsCollection = db.collection("Guests");
+
+    let contactIdQuery;
+    if (ObjectId.isValid(contactId)) {
+      contactIdQuery = new ObjectId(contactId);
+    } else {
+      console.error("Error: Invalid contactId format.");
+      return res.status(400).json({ success: false, error: "Invalid contactId format." });
+    }
+
+    const deleteResult = await contactsCollection.deleteOne({ _id: contactIdQuery });
+
+    if (deleteResult.deletedCount === 1) {
+      console.log("Successfully deleted contact:", contactId);
+      res.status(200).json({ success: true, message: "Contact deleted successfully." });
+    } else {
+      console.log("No contact found with the given contactId.");
+      res.status(404).json({ success: false, error: "Contact not found." });
+    }
+  } catch (err) {
+    console.error("Error deleting contact:", err);
+    res.status(500).json({ success: false, error: "An error occurred while deleting the contact." });
+  }
+  // test data
+  // "EventID": "ObjectId('67bd434d293afd96eae2e86b')",
+  // "FirstName": "Joanna",
+  // "LastName": "Britto",
+  // "Phone": "123-123-1234",
+  // "Status": 1
+});
+
+
+
 // // Update contact status
 // app.post("/api/updateContactStatus", async (req, res) => {
 //   // incoming: contactId, status
@@ -465,54 +569,18 @@ app.post("/api/searchContacts", async (req, res, next) => {
 //   }
 // });
 
-// // Delete contact
-// app.post("/api/deleteContact", async (req, res) => {
-//   // incoming: contactId
-//   // outgoing: success message or error
-//   console.log("Deleting contact: ", req.body);
-
-//   const { contactId } = req.body;
-//   let error = "";
-
-//   if (!contactId) {
-//     error = "Contact ID is required.";
-//     return res.status(400).json({ success: false, error });
-//   }
-
-//   try {
-//     const db = client.db();
-//     const contactsCollection = db.collection("Contacts");
-
-//     // Delete the contact
-//     const deleteResult = await contactsCollection.deleteOne({
-//       _id: new ObjectId(contactId),
-//     });
-
-//     if (deleteResult.deletedCount === 0) {
-//       error = "Contact not found.";
-//       return res.status(404).json({ success: false, error });
-//     }
-
-//     res.status(200).json({ success: true, error: "" });
-//   } catch (err) {
-//     console.error("Error deleting contact:", err);
-//     error = "An error occurred while deleting the contact.";
-//     res.status(500).json({ success: false, error });
-//   }
-// });
-
-// app.use((req, res, next) => {
-//   res.setHeader("Access-Control-Allow-Origin", "*");
-//   res.setHeader(
-//     "Access-Control-Allow-Headers",
-//     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-//   );
-//   res.setHeader(
-//     "Access-Control-Allow-Methods",
-//     "GET, POST, PATCH, DELETE, OPTIONS"
-//   );
-//   next();
-// });
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PATCH, DELETE, OPTIONS"
+  );
+  next();
+});
 
 app.listen(5000); // start Node + Express server on port 5000. port 5000 is occupied on my computer so it's port 5001 here, but just
 //change all occurrences of 5001 to 5000 for your own testing if you want Access the database (EventManager)
