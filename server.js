@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const { ObjectId } = require("mongodb");
+const twilio = require("twilio");
 const app = express();
 
 app.use(cors());
@@ -11,6 +12,11 @@ const MongoClient = require("mongodb").MongoClient;
 require("dotenv").config();
 const url = process.env.MONGODB_URI;
 const client = new MongoClient(url);
+
+const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
 async function connectDB() {
   try {
@@ -129,6 +135,81 @@ app.post("/api/login", async (req, res, next) => {
   var ret = { id: id, firstName: fn, lastName: ln, email: email, error: "" };
   res.status(200).json(ret);
 });
+
+// Send invite to all guests associated with the eventId
+app.post("/api/invite", async (req, res) => {
+  const { eventId } = req.body;
+
+  console.log("Sending invites for eventId:", eventId);
+
+  if (!eventId) {
+    return res.status(400).json({ error: "Event ID is required." });
+  }
+
+  try {
+    const db = client.db();
+    const guestsCollection = db.collection("Guests");
+
+    // Get all guests associated with the given eventId
+    const guests = await guestsCollection
+      .find({ EventID: new ObjectId(eventId) })
+      .toArray();
+
+    if (guests.length === 0) {
+      return res.status(404).json({ error: "No guests found for this event." });
+    }
+
+    // Send SMS to each guest
+    const sendInvitesPromises = guests.map(async (guest) => {
+      const phoneNumber = guest.Phone;
+      const guestName = `${guest.FirstName} ${guest.LastName}`;
+
+      // Generate the RSVP link
+      const rsvpLink = `http://espressoevents.xyz/rsvp?eventId=${eventId}&guestId=${guest._id}`;
+      
+      // Include the RSVP link in the message
+      const message = `Hello ${guestName}, you are invited to an event! To RSVP, please click here: ${rsvpLink}`;
+
+      try {
+        const messageResponse = await twilioClient.messages.create({
+          body: message,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: phoneNumber,
+        });
+
+        console.log(`Message sent to ${phoneNumber}: ${messageResponse.sid}`);
+        return { phoneNumber, status: "success" };
+      } catch (error) {
+        console.error("Error sending message to", phoneNumber, error);
+        return { phoneNumber, status: "error", error: error.message };
+      }
+    });
+
+    // Wait for all messages to be sent
+    const results = await Promise.all(sendInvitesPromises);
+
+    // Check if any errors occurred
+    const failedMessages = results.filter((result) => result.status === "error");
+
+    if (failedMessages.length > 0) {
+      return res.status(500).json({
+        success: false,
+        message: "Some invitations failed to send.",
+        failedMessages,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Invitations sent successfully.",
+      results,
+    });
+  } catch (error) {
+    console.error("Error sending invitations:", error);
+    return res.status(500).json({ error: "An error occurred while sending invitations." });
+  }
+});
+
 
 // // Get user events
 // app.post("/api/getUserEvents", async (req, res) => {

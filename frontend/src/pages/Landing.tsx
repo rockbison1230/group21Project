@@ -42,6 +42,10 @@ function Landing() {
             Login
         </span>
         </div>
+        <p>SMS Invitation Consent:
+By providing your phone number to an event organizer on Espresso Events, you consent to receive event invitations and RSVP reminders via SMS. You can opt out at any time by replying "STOP."
+
+This feature is used solely for event invitations and will not send promotional messages.</p>
       </div>
     </div>
     </>
