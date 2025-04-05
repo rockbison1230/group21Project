@@ -210,60 +210,55 @@ app.post("/api/invite", async (req, res) => {
   }
 });
 
+// Get an array of User's events
+app.post("/api/getUserEvents", async (req, res) => {
+  console.log("Getting events for user: ", req.body);
 
-// // Get user events
-// app.post("/api/getUserEvents", async (req, res) => {
-//   // incoming: userId
-//   // outgoing: events array or error
-//   console.log("Getting events for user: ", req.body);
+  const { userId } = req.body;
+  let error = "";
 
-//   const { userId } = req.body;
-//   let error = "";
+  if (!userId) {
+    return res.status(400).json({ events: [], error: "User ID is required." });
+  }
 
-//   if (!userId) {
-//     error = "User ID is required.";
-//     return res.status(400).json({ events: [], error });
-//   }
+  try {
+    const db = client.db();
+    const eventsCollection = db.collection("Events");
 
-//   try {
-//     const db = client.db();
-//     const eventsCollection = db.collection("Events");
+    // Find all events for this user
+    const events = await eventsCollection
+      .find({ HostID: userId.toString() }) // Changed to HostID
+      .toArray();
 
-//     // Find all events for this user
-//     const events = await eventsCollection
-//       .find({ UserId: userId.toString() })
-//       .toArray();
+    // For each event, get its guests
+    const eventsWithGuests = await Promise.all(
+      events.map(async (event) => {
+        const guestsCollection = db.collection("Guests"); // Changed to Guests
+        const guests = await guestsCollection
+          .find({ EventID: event._id.toString() }) // Changed to EventID
+          .toArray();
 
-//     // For each event, get its contacts
-//     const eventsWithContacts = await Promise.all(
-//       events.map(async (event) => {
-//         const contactsCollection = db.collection("Contacts");
-//         const contacts = await contactsCollection
-//           .find({ EventId: event._id.toString() })
-//           .toArray();
+        // Format guests for the frontend
+        const formattedGuests = guests.map((guest) => ({
+          id: guest._id,
+          name: `${guest.FirstName} ${guest.LastName}`,
+          email: guest.Email,
+          attending: guest.Status || "pending",
+        }));
 
-//         // Format contacts for the frontend
-//         const formattedContacts = contacts.map((contact) => ({
-//           id: contact._id,
-//           name: `${contact.FirstName} ${contact.LastName}`,
-//           email: contact.Email,
-//           attending: contact.Status || "pending",
-//         }));
+        return {
+          ...event,
+          Guests: formattedGuests, // Changed to Guests
+        };
+      })
+    );
 
-//         return {
-//           ...event,
-//           Contacts: formattedContacts,
-//         };
-//       })
-//     );
-
-//     res.status(200).json({ events: eventsWithContacts, error: "" });
-//   } catch (err) {
-//     console.error("Error fetching events:", err);
-//     error = "An error occurred while fetching events.";
-//     res.status(500).json({ events: [], error });
-//   }
-// });
+    res.status(200).json({ events: eventsWithGuests, error: "" });
+  } catch (err) {
+    console.error("Error fetching events:", err);
+    res.status(500).json({ events: [], error: "An error occurred while fetching events." });
+  }
+});
 
 // Add new event
 app.post("/api/addEvent", async (req, res) => {
