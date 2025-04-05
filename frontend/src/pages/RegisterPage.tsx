@@ -3,13 +3,14 @@ import Register from '../components/Register';
 import Navbar from '../components/Navbar';
 
 const RegisterPage = () => {
-  return(
-
-    <div>
+  return (
+    <>
       <Navbar />
-      <PageTitle />
-      <Register />
-    </div>
+      <div style={{ paddingTop: '75px', textAlign: 'center' }}>
+        <PageTitle />
+        <Register />
+      </div>
+    </>
   );
 };
 

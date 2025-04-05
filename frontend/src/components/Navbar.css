@@ -1,6 +1,6 @@
 
 .navbar {
-  width: 100%;
+  width: 100vw; /* Force full viewport width */
   background-color: #fef6e4;
   padding: 1rem 2rem;
   position: fixed;
@@ -9,7 +9,13 @@
   z-index: 1000;
   display: flex;
   align-items: center;
+  justify-content: space-between; /* Add if you have login/register buttons */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #eee;
+  box-sizing: border-box; /* Makes sure padding doesn’t break width */
+  backdrop-filter: none;     /* disables blur if applied */
+  background-image: none;    /* disables any inherited gradients */
+  background: #fef6e4 !important; /* force it */
 }
 
 .navbar-logo {
@@ -22,4 +28,33 @@
 
 .navbar-logo:hover {
   text-decoration: underline;
+}
+
+.navbar-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.navbar-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  background-color: #6f4e37; /* dark roast */
+  color: #fff;
+}
+
+.navbar-button:hover {
+  background-color: #8b5e3c; /* lighter roast */
+}
+
+.navbar-button:last-child {
+  background-color: #c4a484; /* latte beige */
+  color: #4b2e2e;
+}
+
+.navbar-button:last-child:hover {
+  background-color: #d6b89a;
 }

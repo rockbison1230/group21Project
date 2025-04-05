@@ -1,7 +1,7 @@
 function PageTitle()
 {
     return(
-        <h1 id="title">EspressoEvents</h1>
+        <h1 id="title">Espresso Events</h1>
     );
 };
 

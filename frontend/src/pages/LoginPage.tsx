@@ -7,7 +7,7 @@ const LoginPage = () => {
     <div>
       <Navbar />
       <PageTitle />
-      <Login />
+      <Login/>
       <div style={{ textAlign: 'center', marginTop: '20px' }}>
         <p>New user? <a href="/register">Register here</a></p>
       </div>

@@ -10,8 +10,18 @@ function Navbar() {
       <span className="navbar-logo" onClick={() => navigate('/')}>
         Espresso Events
       </span>
+      
+      <div className="navbar-buttons">
+        <button className="navbar-button" onClick={() => navigate('/login')}>
+          Login
+        </button>
+        <button className="navbar-button" onClick={() => navigate('/register')}>
+          Register
+        </button>
+      </div>
     </nav>
   );
 }
 
 export default Navbar;
+
