@@ -266,44 +266,39 @@ app.post("/api/invite", async (req, res) => {
 // });
 
 // Add new event
-// app.post("/api/addEvent", async (req, res) => {
-//   // incoming: userId, title, date, time, location, image (optional), description (optional)
-//   // outgoing: eventId or error
-//   console.log("Adding new event: ", req.body);
+app.post("/api/addEvent", async (req, res) => {
+  console.log("Adding new event: ", req.body);
 
-//   const { userId, title, date, time, location, image, description } = req.body;
-//   let error = "";
+  const { userId, title, date, time, location, image, description } = req.body;
+  let error = "";
 
-//   if (!userId || !title || !date || !time || !location) {
-//     error = "Required fields missing.";
-//     return res.status(400).json({ eventId: -1, error });
-//   }
+  if (!userId || !title || !date || !time || !location) {
+    return res.status(400).json({ eventId: -1, error: "Required fields missing." });
+  }
 
-//   try {
-//     const db = client.db();
-//     const eventsCollection = db.collection("Events");
+  try {
+    const db = client.db();
+    const eventsCollection = db.collection("Events");
 
-//     // Create new event
-//     const newEvent = {
-//       UserId: userId.toString(),
-//       Title: title,
-//       Date: date,
-//       Time: time,
-//       Location: location,
-//       Image: image || "📅" || "",
-//       Description: description || "",
-//       CreatedAt: new Date(),
-//     };
+    const newEvent = {
+      HostID: userId.toString(), // Changed to HostID
+      EventName: title, // Changed to EventName
+      Date: date,
+      Time: time,
+      Location: location,
+      Image: image || "",
+      Description: description || "",
+      CreatedAt: new Date(),
+    };
 
-//     const result = await eventsCollection.insertOne(newEvent);
+    const result = await eventsCollection.insertOne(newEvent);
 
-//     res.status(200).json({ eventId: result.insertedId, error: "" });
-//   } catch (err) {
-//     console.error("Error adding event:", err);
-//     error = "An error occurred while adding the event.";
-//     res.status(500).json({ eventId: -1, error });
-//   }
-// });
+    res.status(200).json({ eventId: result.insertedId, error: "" });
+  } catch (err) {
+    console.error("Error adding event:", err);
+    res.status(500).json({ eventId: -1, error: "An error occurred while adding the event." });
+  }
+});
 
 // // Update event
 // app.post("/api/updateEvent", async (req, res) => {
@@ -352,45 +347,53 @@ app.post("/api/invite", async (req, res) => {
 //   }
 // });
 
-// // Delete event
-// app.post("/api/deleteEvent", async (req, res) => {
-//   // incoming: eventId
-//   // outgoing: success message or error
-//   console.log("Deleting event: ", req.body);
+// Delete event
+app.post("/api/deleteEvent", async (req, res) => {
+  console.log("Deleting event: ", req.body);
 
-//   const { eventId } = req.body;
-//   let error = "";
+  const { eventId, userId } = req.body; // Added userId
+  let error = "";
 
-//   if (!eventId) {
-//     error = "Event ID is required.";
-//     return res.status(400).json({ success: false, error });
-//   }
+  if (!eventId || !userId) {
+    return res.status(400).json({ success: false, error: "Event ID and User ID are required." });
+  }
 
-//   try {
-//     const db = client.db();
-//     const eventsCollection = db.collection("Events");
-//     const contactsCollection = db.collection("Contacts");
+  try {
+    let objectId;
+    try {
+      objectId = new ObjectId(eventId);
+    } catch (err) {
+      return res.status(400).json({ success: false, error: "Invalid Event ID." });
+    }
 
-//     // Delete the event
-//     const deleteResult = await eventsCollection.deleteOne({
-//       _id: new ObjectId(eventId),
-//     });
+    const db = client.db();
+    const eventsCollection = db.collection("Events");
+    const guestsCollection = db.collection("Guests");
 
-//     if (deleteResult.deletedCount === 0) {
-//       error = "Event not found.";
-//       return res.status(404).json({ success: false, error });
-//     }
+    // Ownership check
+    const deleteResult = await eventsCollection.deleteOne({
+      _id: objectId,
+      HostID: userId.toString(), // Added HostID check
+    });
 
-//     // Delete all contacts associated with this event
-//     await contactsCollection.deleteMany({ EventId: eventId.toString() });
+    if (deleteResult.deletedCount === 0) {
+      // Either event not found or user doesn't own it
+      const eventExists = await eventsCollection.findOne({ _id: objectId });
+      if (eventExists) {
+          return res.status(403).json({ success: false, error: "You are not authorized to delete this event." });
+      } else {
+          return res.status(404).json({ success: false, error: "Event not found." });
+      }
+    }
 
-//     res.status(200).json({ success: true, error: "" });
-//   } catch (err) {
-//     console.error("Error deleting event:", err);
-//     error = "An error occurred while deleting the event.";
-//     res.status(500).json({ success: false, error });
-//   }
-// });
+    await guestsCollection.deleteMany({ EventID: eventId.toString() });
+
+    res.status(200).json({ success: true, error: "" });
+  } catch (err) {
+    console.error("Error deleting event:", err);
+    res.status(500).json({ success: false, error: "An error occurred while deleting the event." });
+  }
+});
 
 // // Add contact to event
 // app.post("/api/addContact", async (req, res) => {
@@ -607,48 +610,56 @@ app.post("/api/deleteContacts", async (req, res, next) => {
 });
 
 
+// Update guest status
+app.post("/api/updateGuestStatus", async (req, res) => {
+  console.log("Updating guest status: ", req.body);
 
-// // Update contact status
-// app.post("/api/updateContactStatus", async (req, res) => {
-//   // incoming: contactId, status
-//   // outgoing: success message or error
-//   console.log("Updating contact status: ", req.body);
+  const { eventId, guestId, status } = req.body;
+  let error = "";
 
-//   const { contactId, status } = req.body;
-//   let error = "";
+  if (!eventId || !guestId || !status) {
+    return res.status(400).json({ success: false, error: "Event ID, Guest ID, and Status are required." });
+  }
 
-//   if (!contactId || !status) {
-//     error = "Contact ID and status are required.";
-//     return res.status(400).json({ success: false, error });
-//   }
+  try {
+    let eventObjectId;
+    let guestObjectId;
+    try {
+      eventObjectId = new ObjectId(eventId);
+      guestObjectId = new ObjectId(guestId);
+    } catch (err) {
+      return res.status(400).json({ success: false, error: "Invalid Event ID or Guest ID." });
+    }
 
-//   try {
-//     const db = client.db();
-//     const contactsCollection = db.collection("Contacts");
+    const db = client.db();
+    const guestsCollection = db.collection("Guests");
 
-//     // Update contact status
-//     const updateResult = await contactsCollection.updateOne(
-//       { _id: new ObjectId(contactId) },
-//       {
-//         $set: {
-//           Status: status,
-//           UpdatedAt: new Date(),
-//         },
-//       }
-//     );
+    // Check if the guest exists for this event
+    const guest = await guestsCollection.findOne({
+      _id: guestObjectId,
+      EventID: eventId.toString(),
+    });
 
-//     if (updateResult.matchedCount === 0) {
-//       error = "Contact not found.";
-//       return res.status(404).json({ success: false, error });
-//     }
+    if (!guest) {
+      return res.status(404).json({ success: false, error: "Guest not found for this event." });
+    }
 
-//     res.status(200).json({ success: true, error: "" });
-//   } catch (err) {
-//     console.error("Error updating contact status:", err);
-//     error = "An error occurred while updating the contact status.";
-//     res.status(500).json({ success: false, error });
-//   }
-// });
+    // Update the guest status and add UpdatedAt
+    const updateResult = await guestsCollection.updateOne(
+      { _id: guestObjectId, EventID: eventId.toString() },
+      { $set: { Status: status, UpdatedAt: new Date() } } // Added UpdatedAt
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      return res.status(500).json({ success: false, error: "Failed to update guest status." });
+    }
+
+    res.status(200).json({ success: true, error: "" });
+  } catch (err) {
+    console.error("Error updating guest status:", err);
+    res.status(500).json({ success: false, error: "An error occurred while updating the guest status." });
+  }
+});
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
