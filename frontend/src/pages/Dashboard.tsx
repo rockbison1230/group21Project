@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import EmojiPicker from 'emoji-picker-react';
 import './Dashboard.css';
@@ -33,8 +33,6 @@ interface Event {
   contacts: Contact[];
 }
 
-// We'll fetch events from the API instead of using sample data
-
 function Dashboard() {
   const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
@@ -63,51 +61,13 @@ function Dashboard() {
     description: ''
   });
 
-  // Close emoji picker when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
-        setShowEmojiPicker(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  // Handle emoji selection
-  const onEmojiClick = (emojiData: any) => {
-    setEventForm(prev => ({
-      ...prev,
-      image: emojiData.emoji
-    }));
-    setShowEmojiPicker(false);
-  };
-
-  // Check for user login on component mount
-  useEffect(() => {
-    const checkLogin = () => {
-      const userData = localStorage.getItem('user_data');
-      if (!userData) {
-        // Redirect to login if not logged in
-        navigate('/');
-        return;
-      }
-      
-      const parsedUserData = JSON.parse(userData);
-      setUserData(parsedUserData);
-      
-      // Fetch the user's events from the API
-      fetchUserEvents(parsedUserData.id);
-    };
+  // Define fetchUserEvents as a useCallback to prevent unnecessary re-creations
+  const fetchUserEvents = useCallback(async (userId: string) => {
+    if (!userId) {
+      console.error('No userId provided to fetchUserEvents');
+      return;
+    }
     
-    checkLogin();
-  }, [navigate]);
-
-  // Fetch user events from the API
-  const fetchUserEvents = async (userId: string) => {
     setIsLoading(true);
     setErrorMessage('');
     
@@ -120,7 +80,7 @@ function Dashboard() {
       
       const data = await response.json();
       if (data.error) {
-        console.error(data.error);
+        console.error('API Error:', data.error);
         setErrorMessage('Failed to load events. Please try again.');
         setEvents([]);
         return;
@@ -152,6 +112,73 @@ function Dashboard() {
     } finally {
       setIsLoading(false);
     }
+  }, []); // No dependencies means this function won't be recreated
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Check for user login on component mount
+  useEffect(() => {
+    const checkLogin = () => {
+      const userDataStr = localStorage.getItem('user_data');
+      if (!userDataStr) {
+        // Redirect to login if not logged in
+        navigate('/');
+        return;
+      }
+      
+      try {
+        const parsedUserData = JSON.parse(userDataStr);
+        setUserData(parsedUserData);
+        
+        // Only fetch if we have a valid userId
+        if (parsedUserData && parsedUserData.id) {
+          fetchUserEvents(parsedUserData.id);
+        } else {
+          console.error('Invalid user data structure:', parsedUserData);
+          setErrorMessage('Invalid user session. Please log in again.');
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        // Handle invalid JSON in localStorage
+        localStorage.removeItem('user_data');
+        navigate('/');
+      }
+    };
+    
+    checkLogin();
+    // Include fetchUserEvents in the dependency array so this effect
+    // runs again if fetchUserEvents changes (which it shouldn't due to useCallback)
+  }, [navigate, fetchUserEvents]);
+
+  // Handle input change for event form
+  const handleEventInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEventForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle emoji selection
+  const onEmojiClick = (emojiData: any) => {
+    setEventForm(prev => ({
+      ...prev,
+      image: emojiData.emoji
+    }));
+    setShowEmojiPicker(false);
   };
 
   // Filter events based on search term
@@ -166,25 +193,16 @@ function Dashboard() {
     contact.email.toLowerCase().includes(contactSearchTerm.toLowerCase())
   ) || [];
 
-  // Handle input change for event form
-  const handleEventInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setEventForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   // Handle form submission for new event
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!userData || !userData.id) {
+      console.error('No user data available');
+      return;
+    }
+    
     try {
-      const userDataStr = localStorage.getItem('user_data');
-      if (!userDataStr) return;
-      
-      const userData = JSON.parse(userDataStr);
-      
       const eventData = {
         userId: userData.id,
         title: eventForm.title,
@@ -203,7 +221,7 @@ function Dashboard() {
       
       const data = await response.json();
       if (data.error) {
-        console.error(data.error);
+        console.error('API Error:', data.error);
         alert(`Error adding event: ${data.error}`);
         return;
       }
@@ -245,33 +263,20 @@ function Dashboard() {
       
       const data = await response.json();
       if (data.error) {
-        console.error(data.error);
+        console.error('API Error:', data.error);
         alert(`Error updating event: ${data.error}`);
         return;
       }
       
-      // Update local state
-      const updatedEvents = events.map(event => 
-        event.id === selectedEvent.id 
-          ? { ...event, ...eventForm } 
-          : event
-      );
-      
-      setEvents(updatedEvents);
-      
-      // If details modal is open, update the selected event
-      if (showDetailsModal) {
-        setSelectedEvent({ ...selectedEvent, ...eventForm });
-      }
-      
-      setShowEditEventModal(false);
-      
-      // Refresh events to get the latest data
-      const userDataStr = localStorage.getItem('user_data');
-      if (userDataStr) {
-        const userData = JSON.parse(userDataStr);
+      // No need to manually update state if we'll refetch from the server
+      if (userData && userData.id) {
         fetchUserEvents(userData.id);
       }
+      
+      // If details modal is open, update the selected event
+      // We'll fetch fresh data, so no need to manually update selectedEvent
+      
+      setShowEditEventModal(false);
       
       // Reset form
       resetEventForm();
@@ -293,24 +298,20 @@ function Dashboard() {
         
         const data = await response.json();
         if (data.error) {
-          console.error(data.error);
+          console.error('API Error:', data.error);
           alert(`Error deleting event: ${data.error}`);
           return;
         }
-        
-        // Update local state
-        setEvents(events.filter(event => event.id !== id));
         
         // Close modals if the deleted event was selected
         if (selectedEvent && selectedEvent.id === id) {
           setShowDetailsModal(false);
           setShowEditEventModal(false);
+          setSelectedEvent(null);
         }
         
         // Refresh the events list
-        const userDataStr = localStorage.getItem('user_data');
-        if (userDataStr) {
-          const userData = JSON.parse(userDataStr);
+        if (userData && userData.id) {
           fetchUserEvents(userData.id);
         }
       } catch (error) {
@@ -354,41 +355,39 @@ function Dashboard() {
       
       const data = await response.json();
       if (data.error) {
-        console.error(data.error);
+        console.error('API Error:', data.error);
         alert(`Error adding contact: ${data.error}`);
         return;
       }
       
-      // Add the new contact to the local state
-      const newContactId = selectedEvent.contacts.length > 0 
-        ? Math.max(...selectedEvent.contacts.map(c => c.id)) + 1 
-        : 1;
-      
-      const contactToAdd = {
-        id: data.contactId || newContactId, // Use the ID from the API if available
-        name: newContact.name,
-        email: newContact.email,
-        attending: 'pending'
-      };
-      
-      const updatedEvent = {
-        ...selectedEvent,
-        contacts: [...selectedEvent.contacts, contactToAdd]
-      };
-      
-      // Update events array
-      setEvents(events.map(event => 
-        event.id === selectedEvent.id ? updatedEvent : event
-      ));
-      
-      // Update selected event
-      setSelectedEvent(updatedEvent);
-      
       // Refresh the event data to get the latest contacts
-      const userDataStr = localStorage.getItem('user_data');
-      if (userDataStr) {
-        const userData = JSON.parse(userDataStr);
+      if (userData && userData.id) {
         fetchUserEvents(userData.id);
+        
+        // After refreshing all events, we need to update the selectedEvent
+        // with the refreshed data once the fetch completes
+        const updatedEvents = await fetch(buildPath(`api/getUserEvents`), {
+          method: 'POST',
+          body: JSON.stringify({ userId: userData.id }),
+          headers: { 'Content-Type': 'application/json' }
+        }).then(res => res.json());
+        
+        if (!updatedEvents.error && updatedEvents.events) {
+          const refreshedEvent = updatedEvents.events.find((e: any) => e._id === selectedEvent.id);
+          if (refreshedEvent) {
+            const formattedEvent = {
+              id: refreshedEvent._id,
+              title: refreshedEvent.Title,
+              date: refreshedEvent.Date,
+              time: refreshedEvent.Time,
+              location: refreshedEvent.Location,
+              image: refreshedEvent.Image || '📅',
+              description: refreshedEvent.Description || '',
+              contacts: refreshedEvent.Contacts || []
+            };
+            setSelectedEvent(formattedEvent);
+          }
+        }
       }
       
       // Reset form
@@ -414,34 +413,38 @@ function Dashboard() {
         
         const data = await response.json();
         if (data.error) {
-          console.error(data.error);
+          console.error('API Error:', data.error);
           alert(`Error removing contact: ${data.error}`);
           return;
         }
         
-        // Update local state
-        const updatedContacts = selectedEvent.contacts.filter(
-          contact => contact.id !== contactId
-        );
-        
-        const updatedEvent = {
-          ...selectedEvent,
-          contacts: updatedContacts
-        };
-        
-        // Update events array
-        setEvents(events.map(event => 
-          event.id === selectedEvent.id ? updatedEvent : event
-        ));
-        
-        // Update selected event
-        setSelectedEvent(updatedEvent);
-        
         // Refresh events to get the latest data
-        const userDataStr = localStorage.getItem('user_data');
-        if (userDataStr) {
-          const userData = JSON.parse(userDataStr);
+        if (userData && userData.id) {
           fetchUserEvents(userData.id);
+          
+          // After refreshing all events, update the selectedEvent
+          const updatedEvents = await fetch(buildPath(`api/getUserEvents`), {
+            method: 'POST',
+            body: JSON.stringify({ userId: userData.id }),
+            headers: { 'Content-Type': 'application/json' }
+          }).then(res => res.json());
+          
+          if (!updatedEvents.error && updatedEvents.events) {
+            const refreshedEvent = updatedEvents.events.find((e: any) => e._id === selectedEvent.id);
+            if (refreshedEvent) {
+              const formattedEvent = {
+                id: refreshedEvent._id,
+                title: refreshedEvent.Title,
+                date: refreshedEvent.Date,
+                time: refreshedEvent.Time,
+                location: refreshedEvent.Location,
+                image: refreshedEvent.Image || '📅',
+                description: refreshedEvent.Description || '',
+                contacts: refreshedEvent.Contacts || []
+              };
+              setSelectedEvent(formattedEvent);
+            }
+          }
         }
       } catch (error) {
         console.error('Error removing contact:', error);
@@ -463,38 +466,40 @@ function Dashboard() {
       
       const data = await response.json();
       if (data.error) {
-        console.error(data.error);
+        console.error('API Error:', data.error);
         alert(`Error sending invitation: ${data.error}`);
         return;
       }
       
-      // Update local state to show the contact as invited
-      const updatedContacts = selectedEvent.contacts.map(contact => 
-        contact.id === contactId 
-          ? { ...contact, attending: 'invited' } 
-          : contact
-      );
-      
-      const updatedEvent = {
-        ...selectedEvent,
-        contacts: updatedContacts
-      };
-      
-      // Update events array
-      setEvents(events.map(event => 
-        event.id === selectedEvent.id ? updatedEvent : event
-      ));
-      
-      // Update selected event
-      setSelectedEvent(updatedEvent);
-      
       alert('Invitation sent successfully!');
       
       // Refresh events to get the latest data
-      const userDataStr = localStorage.getItem('user_data');
-      if (userDataStr) {
-        const userData = JSON.parse(userDataStr);
+      if (userData && userData.id) {
         fetchUserEvents(userData.id);
+        
+        // After refreshing all events, update the selectedEvent
+        const updatedEvents = await fetch(buildPath(`api/getUserEvents`), {
+          method: 'POST',
+          body: JSON.stringify({ userId: userData.id }),
+          headers: { 'Content-Type': 'application/json' }
+        }).then(res => res.json());
+        
+        if (!updatedEvents.error && updatedEvents.events) {
+          const refreshedEvent = updatedEvents.events.find((e: any) => e._id === selectedEvent.id);
+          if (refreshedEvent) {
+            const formattedEvent = {
+              id: refreshedEvent._id,
+              title: refreshedEvent.Title,
+              date: refreshedEvent.Date,
+              time: refreshedEvent.Time,
+              location: refreshedEvent.Location,
+              image: refreshedEvent.Image || '📅',
+              description: refreshedEvent.Description || '',
+              contacts: refreshedEvent.Contacts || []
+            };
+            setSelectedEvent(formattedEvent);
+          }
+        }
       }
     } catch (error) {
       console.error('Error sending invitation:', error);
@@ -541,8 +546,6 @@ function Dashboard() {
             <span className="brand-icon">☕</span>
             <h1 className="brand-name">espresso events</h1>
           </a>
-          
-          
         </div>
         
         <div className="navbar-right">
@@ -569,7 +572,7 @@ function Dashboard() {
       <div className="main-content">
         <div className="events-container">
           <div className="events-header">
-            <h2> Events</h2>
+            <h2>Events</h2>
             <button 
               className="add-event-button" 
               onClick={() => {
@@ -593,10 +596,28 @@ function Dashboard() {
                 <button 
                   className="retry-button"
                   onClick={() => {
-                    const userDataStr = localStorage.getItem('user_data');
-                    if (userDataStr) {
-                      const userData = JSON.parse(userDataStr);
+                    if (userData && userData.id) {
                       fetchUserEvents(userData.id);
+                    } else {
+                      // If userData is somehow missing, try to get it again
+                      const userDataStr = localStorage.getItem('user_data');
+                      if (userDataStr) {
+                        try {
+                          const parsedUserData = JSON.parse(userDataStr);
+                          setUserData(parsedUserData);
+                          if (parsedUserData && parsedUserData.id) {
+                            fetchUserEvents(parsedUserData.id);
+                          } else {
+                            alert('Invalid user data. Please log in again.');
+                            navigate('/');
+                          }
+                        } catch (e) {
+                          alert('Invalid user session. Please log in again.');
+                          navigate('/');
+                        }
+                      } else {
+                        navigate('/');
+                      }
                     }
                   }}
                 >
@@ -632,7 +653,7 @@ function Dashboard() {
               ))
             ) : (
               <div className="no-events">
-                <p>No events found. </p>
+                <p>No events found.</p>
               </div>
             )}
           </div>
