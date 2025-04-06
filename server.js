@@ -1,6 +1,10 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+
 const { ObjectId } = require("mongodb");
 const twilio = require("twilio");
 const app = express();
@@ -71,6 +75,8 @@ app.post("/api/register", async (req, res, next) => {
         .json({ id: -1, firstName: "", lastName: "", emailAddress: "", error });
     }
 
+    const verificationToken = crypto.randomBytes(5).toString('hex');
+
     // add new user
     const newUser = {
       FirstName: firstName,
@@ -78,9 +84,12 @@ app.post("/api/register", async (req, res, next) => {
       Username: userName,
       Password: password,
       Email: emailAddress,
+      isVerified: false,
+      vToken: verificationToken,
     };
 
     const result = await usersCollection.insertOne(newUser);
+    sendVerificationEmail(emailAddress, verificationToken);
 
     const ret = {
       id: result.insertedId,
@@ -346,42 +355,33 @@ app.post("/api/addEvent", async (req, res) => {
 app.post("/api/deleteEvent", async (req, res) => {
   console.log("Deleting event: ", req.body);
 
-  const { eventId, userId } = req.body; // Added userId
+  const { eventId } = req.body; // Added userId
   let error = "";
 
-  if (!eventId || !userId) {
-    return res.status(400).json({ success: false, error: "Event ID and User ID are required." });
+  if (!eventId) {
+    return res.status(400).json({ success: false, error: "Event ID is required." });
   }
 
   try {
-    let objectId;
-    try {
-      objectId = new ObjectId(eventId);
-    } catch (err) {
-      return res.status(400).json({ success: false, error: "Invalid Event ID." });
-    }
-
     const db = client.db();
     const eventsCollection = db.collection("Events");
-    const guestsCollection = db.collection("Guests");
+    const contactsCollection = db.collection("Guests");
+    const count = contactsCollection.countDocuments();
+    console.log(`Guest collection size: ${count}`);
 
-    // Ownership check
+    // Delete the event
     const deleteResult = await eventsCollection.deleteOne({
-      _id: objectId,
-      HostID: userId.toString(), // Added HostID check
+      _id: new ObjectId(eventId),
     });
-
+    
     if (deleteResult.deletedCount === 0) {
-      // Either event not found or user doesn't own it
-      const eventExists = await eventsCollection.findOne({ _id: objectId });
-      if (eventExists) {
-          return res.status(403).json({ success: false, error: "You are not authorized to delete this event." });
-      } else {
-          return res.status(404).json({ success: false, error: "Event not found." });
-      }
+      error = "Event not found.";
+      return res.status(404).json({ success: false, error });
     }
-
-    await guestsCollection.deleteMany({ EventID: eventId.toString() });
+    
+    // Delete all contacts associated with this event
+    const deletedGuests = await contactsCollection.deleteMany({ EventId: eventId, });
+    console.log(deletedGuests.deletedCount);
 
     res.status(200).json({ success: true, error: "" });
   } catch (err) {
@@ -390,6 +390,64 @@ app.post("/api/deleteEvent", async (req, res) => {
   }
 });
 
+app.post("/api/addGuest", async (req, res) => {
+  // incoming: eventId, firstName, lastName, email, status
+  // outgoing: contactId or error
+  console.log("Adding guest: ", req.body);
+
+  const { eventId, firstName, lastName, email, status } = req.body;
+  let error = "";
+
+  if (!eventId || !firstName || !email) {
+    error = "Required fields missing.";
+    return res.status(400).json({ contactId: -1, error });
+  }
+
+  try {
+    const db = client.db();
+    const guestsCollection = db.collection("Guests");
+
+    // Check if the event exists
+    const eventsCollection = db.collection("Events");
+    const event = await eventsCollection.findOne({
+      _id: new ObjectId(eventId),
+    });
+
+    if (!event) {
+      error = "Event not found.";
+      return res.status(404).json({ contactId: -1, error });
+    }
+
+    // Check if contact already exists for this event
+    const existingGuest = await guestsCollection.findOne({
+      EventId: eventId.toString(),
+      Email: email,
+    });
+
+    if (existingGuest) {
+      error = "Guest with this email already exists for this event.";
+      return res.status(400).json({ contactId: -1, error });
+    }
+
+    // Create new contact
+    const newContact = {
+      EventId: eventId.toString(),
+      FirstName: firstName,
+      LastName: lastName || "",
+      Email: email,
+      Status: status || "pending",
+      CreatedAt: new Date(),
+    };
+
+    const result = await guestsCollection.insertOne(newContact);
+
+    res.status(200).json({ contactId: result.insertedId, error: "" });
+  } catch (err) {
+    console.error("Error adding contact:", err);
+    error = "An error occurred while adding the contact.";
+    res.status(500).json({ contactId: -1, error });
+  }
+});
 // // Add contact to event
 // app.post("/api/addContact", async (req, res) => {
 //   // incoming: eventId, firstName, lastName, email, status
@@ -607,16 +665,36 @@ app.post("/api/deleteContacts", async (req, res, next) => {
 
 // Update guest status
 app.post("/api/updateGuestStatus", async (req, res) => {
-  console.log("Updating guest status: ", req.body);
+  console.log("Updating guest status: ", req.query);
 
-  const { eventId, guestId, status } = req.body;
+  const { guestId, status } = req.query;
   let error = "";
 
-  if (!eventId || !guestId || !status) {
-    return res.status(400).json({ success: false, error: "Event ID, Guest ID, and Status are required." });
+  if (!guestId || !status) {
+    return res.status(400).json({ success: false, error: "Guest ID, and Status are required." });
   }
 
   try {
+    const db = client.db();
+    const guestsCollection = db.collection("Guests");
+
+    const updateResult = await guestsCollection.updateOne(
+      { _id: new ObjectId(guestId) },
+      {
+        $set: {
+          Status: status,
+          UpdatedAt: new Date(),
+        },
+      }
+    );
+
+    if (updateResult.matchedCount === 0) {
+      error = "Contact not found.";
+      return res.status(404).json({ success: false, error });
+    }
+
+    res.status(200).json({ success: true, error: "" });
+    /*
     let eventObjectId;
     let guestObjectId;
     try {
@@ -650,11 +728,102 @@ app.post("/api/updateGuestStatus", async (req, res) => {
     }
 
     res.status(200).json({ success: true, error: "" });
+    */
   } catch (err) {
     console.error("Error updating guest status:", err);
     res.status(500).json({ success: false, error: "An error occurred while updating the guest status." });
   }
 });
+
+async function sendVerificationEmail(emailAddress, verificationToken) {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: emailAddress,
+    subject: 'Espresso Events Email Verification',
+    text: `Please use this code to finish your registration ${verificationToken}`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('sent verification email');
+  } catch (error) {
+    console.error('error sending mail: ', error);
+  }
+}
+
+// on successful verification route to login?
+app.get('/api/verify', async (req, res) => {
+  // Incoming: verificationToken
+  // Outgoing: success message or error message
+  const { token } = req.body;
+  console.log("api reached");
+  const db = client.db();
+  const usersCollection = db.collection("Users");
+
+  const user = await usersCollection.findOne({ verificationToken: token});
+
+  if (!user) {
+    return res.status(400).json({ message: 'Invalid token' });
+  }
+
+  try {
+    await usersCollection.updateOne(
+      { _id: new ObjectId(user._id) },
+      { $set: { isVerified: true, vToken: null } }
+    );
+    res.status(200).json({ message: 'Verification Successful!' });
+  } catch (err) {
+    console.error('Error updating user: ', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+})
+
+app.post('/api/sendGuestInvite', async (req, res) => {
+  const { guestId, email } = req.body;
+
+  if (!email || !guestId) return res.status(400).json({ error: "missing email field"});
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const approveUrl = `http://localhost:5001/api/updateGuestStatus?guestId=${guestId}&status=1`;
+    const rejectUrl = `http://localhost:5001/api/updateGuestStatus?guestId=${guestId}&status=0`;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Please RSVP here!',
+      html: `
+        <h3>Will You Attend?</h3>
+        <a href="${approveUrl}" style="padding:10px 20px;background:green;color:white;text-decoration:none;border-radius:5px;">Yes!</a>
+        &nbsp;
+        <a href="${rejectUrl}" style="padding:10px 20px;background:red;color:white;text-decoration:none;border-radius:5px;">No</a>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.json({ message: 'Email successful'});
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({error: 'email failed'});
+  }
+})
+
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -669,5 +838,5 @@ app.use((req, res, next) => {
   next();
 });
 
-app.listen(5000); // start Node + Express server on port 5000. port 5000 is occupied on my computer so it's port 5001 here, but just
+app.listen(5001); // start Node + Express server on port 5000. port 5000 is occupied on my computer so it's port 5001 here, but just
 //change all occurrences of 5001 to 5000 for your own testing if you want Access the database (EventManager)
