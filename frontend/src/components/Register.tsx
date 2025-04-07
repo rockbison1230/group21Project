@@ -1,4 +1,4 @@
-import * as React from 'react';
+//import * as React from 'react';
 import { useState } from 'react';
 //import './Register.css';
 
@@ -19,6 +19,7 @@ function Register() {
   const [email, setEmail] = useState('');
   const [loginPassword, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isRegistered, setIsRegistered] = useState(false);
 
   async function doRegister(): Promise<void> {
     if (loginPassword !== confirmPassword) {
@@ -45,14 +46,38 @@ function Register() {
       if (res.error) {
         setMessage(res.error);
       } else {
-        setMessage('Registration successful');
+        setIsRegistered(true);
+        setMessage('Registration successful. Please check your email for a verification code.');
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = '/verification';
         }, 1500);
       }
     } catch (error: any) {
       alert(error.toString());
     }
+  }
+
+  if(isRegistered){
+    return (
+      <div className="register-container">
+        <h2 className="register-title">REGISTRATION SUCCESSFUL</h2>
+        <p style={{ textAlign: 'center', margin: '20px 0' }}>
+          Your account has been created! Please check your email for the verification code.
+        </p>
+        <button 
+          onClick={() => window.location.href = '/verify'} 
+          className="register-button"
+        >
+          Go to Verification
+        </button>
+        <p className="register-footer">
+          Already verified?{' '}
+          <span className="register-link" onClick={() => (window.location.href = '/login')}>
+            Login
+          </span>
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -68,7 +93,18 @@ function Register() {
       {message && <p className="register-message">{message}</p>}
       <p className="register-footer">
         Already have an account?{' '}
-        <span className="register-link" onClick={() => (window.location.href = '/login')}>Login</span>
+        <span 
+        className="register-link" 
+        onClick={() => (window.location.href = '/login')}
+        style={{
+          color: '#5a3215',
+          textDecoration: 'underline',
+          fontWeight: 'bold',
+          cursor: 'pointer'
+        }}
+      >
+        Login
+      </span>
       </p>
     </div>
   );

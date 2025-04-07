@@ -1,12 +1,12 @@
 //import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
+//import LoginPage from './pages/LoginPage';
+//import RegisterPage from './pages/RegisterPage';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import AuthPage from './pages/AuthPage';
-
+import VerifyUser from './pages/VerifyUser';
 function App() {
   return (
     <BrowserRouter >
@@ -14,6 +14,7 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<AuthPage/>} />
         <Route path="/register" element={<AuthPage/>} />
+        <Route path="/verification" element={<VerifyUser />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>

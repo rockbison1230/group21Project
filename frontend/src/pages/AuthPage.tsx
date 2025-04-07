@@ -1,4 +1,4 @@
-import * as React from 'react';
+//import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Login from '../components/Login';
 import Register from '../components/Register';
