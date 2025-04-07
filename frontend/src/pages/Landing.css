@@ -142,8 +142,6 @@ body {
 }
 
 
-
-
 /* 🎯 Individual Bean Positions (adjust as needed!) */
 .bean1 { bottom: 0%; left: 10%; animation-delay: 0s; }
 .bean2 { bottom: 0%; right: 15%; animation-delay: 1s; }

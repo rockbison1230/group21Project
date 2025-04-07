@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useState } from "react";
 
+
 const app_name = '167.172.31.171';
 
 function buildPath(route: string): string {
@@ -18,28 +19,26 @@ function Login() {
 
   async function doLogin(event: React.FormEvent) {
     event.preventDefault();
-    var obj = { login: loginName, password: loginPassword };
-    var js = JSON.stringify(obj);
-    
+    const obj = { login: loginName, password: loginPassword };
+
     try {
       const response = await fetch(buildPath('api/login'), {
         method: 'POST',
-        body: js,
+        body: JSON.stringify(obj),
         headers: { 'Content-Type': 'application/json' }
       });
-      
-      var res = JSON.parse(await response.text());
+
+      const res = JSON.parse(await response.text());
       if (res.id <= 0) {
         setMessage('User/Password combination incorrect');
       } else {
-        var user = { firstName: res.firstName, lastName: res.lastName, email: res.email, id: res.id };
+        const user = { firstName: res.firstName, lastName: res.lastName, email: res.email, id: res.id };
         localStorage.setItem('user_data', JSON.stringify(user));
         setMessage('');
         window.location.href = '/dashboard';
       }
-    } catch(error: any) {
+    } catch (error: any) {
       alert(error.toString());
-      return;
     }
   }
 
@@ -73,6 +72,8 @@ function Login() {
     </div>
   );
 }
+
+
 
 // Add this CSS to your App.css or create a Login.css file
 /*

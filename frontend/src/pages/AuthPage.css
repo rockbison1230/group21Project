@@ -1,0 +1,141 @@
+
+
+.auth-page {
+    
+    display: flex;
+    justify-content: center;
+    margin-left: 180px;
+    height: 100vh;
+    background: transparent;
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+  }
+  
+  .auth-wrapper {
+    display: flex;
+    flex-direction: row;
+    width: 90%;
+    max-width: 1000px;
+    height: auto;
+    min-height: 600px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+    overflow: hidden;
+    background-color: #fff8ed; /* matches your right form side */
+  }
+  
+  .auth-image-section {
+    background-image: url('/images/auth-photo.png');
+    flex: 1;
+    background-image: url('/images/auth-photo.png'); /* <-- Replace with your photo */
+    background-size: cover;
+    background-position: center;
+  }
+  
+  .auth-form-section {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    background-color: #fff;
+  }
+  
+  .auth-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #4b2e2e;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  
+  .auth-subtitle {
+    font-size: 1rem;
+    text-align: center;
+    color: #7a4d2f;
+    margin-bottom: 24px;
+  }
+  
+  .auth-toggle {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 24px;
+    position: relative;
+    background: #eee;
+    border-radius: 30px;
+    overflow: hidden;
+  }
+  
+  .toggle-option {
+    padding: 10px 24px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #5c4033;
+    flex: 1;
+    text-align: center;
+    z-index: 1;
+    transition: background 0.3s ease;
+  }
+  
+  .toggle-option.active {
+    background: #5c4033;
+    color: white;
+  }
+  
+  .slider {
+    position: absolute;
+    height: 100%;
+    width: 50%;
+    background: #5c4033;
+    border-radius: 30px;
+    top: 0;
+    left: 0;
+    transition: transform 0.3s ease;
+    z-index: 0;
+  }
+  
+  .slide-right {
+    transform: translateX(100%);
+  }
+  
+  .slide-left {
+    transform: translateX(0%);
+  }
+  
+  .auth-container {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .form-slider {
+    display: flex;
+    transition: transform 0.5s ease;
+    width: 200%;
+  }
+  
+  .auth-form {
+    width: 50%;
+    padding: 0 20px;
+  }
+  
+  .show-login {
+    transform: translateX(0%);
+  }
+  
+  .show-register {
+    transform: translateX(-50%);
+  }
+  
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
