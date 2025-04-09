@@ -22,7 +22,7 @@
   box-shadow: none;
   border-radius: 0;
   overflow: hidden;
-  background-color: #fff8ed;
+ 
 }
 
 .auth-image-section {
@@ -30,17 +30,20 @@
   flex: 1;
   background-size: cover;
   background-position: center;
+  background-color: rgba(179, 163, 148, 0);
 }
 
 .auth-form-section {
   flex: 1;
   padding: 40px;
-  padding-top: 120px;
+  padding-top: 100px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  position: center;
-  background-color: #fff;
+  background-color: #ffffff53;
+  width: 100%;
+  max-width: 650px;
+  background-color: #f3f0eb42;
 }
 
 .auth-title {
@@ -317,4 +320,12 @@
 
 .password-validation span {
   margin-right: 8px;
+}
+
+.register-link,
+.login-link {
+  cursor: pointer;
+  color: #5c4033;
+  font-weight: bold;
+  text-decoration: underline;
 }

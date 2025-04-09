@@ -74,6 +74,9 @@ function Login() {
               />
             </div>
           </div>
+          <p className="register-footer">{' '}
+          <span className="login-link" onClick={() => (window.location.href = '/login')}>Forgot Password?</span>
+          </p>
           <button type="submit" className="login-button">
             Login
           </button>

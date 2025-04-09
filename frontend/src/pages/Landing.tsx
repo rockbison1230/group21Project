@@ -61,27 +61,10 @@ function Landing() {
               <button onClick={() => navigate('/register')} className="hero-btn">
                 Create Invite
               </button>
-              <button onClick={() => navigate('/')} className="hero-btn secondary">
-                Get the App
-              </button>
+              
             </div>
 
-            <div className="login-link">
-              Already have an account?{' '}
-              <span
-                onClick={() => navigate('/login')}
-                style={{
-                  color: '#007bff',
-                  cursor: 'pointer',
-                  textDecoration: 'none',
-                  fontWeight: 'bold',
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-                onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
-              >
-                Login
-              </span>
-            </div>
+            
           </div>
         </div>
       </div>

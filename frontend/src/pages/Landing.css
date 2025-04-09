@@ -2,6 +2,7 @@
 .landing-wrapper {
   margin: 0;
   padding: 0;
+  padding-top: 30px;
   max-width: 100%;
   width: 100vw;
   overflow-x: hidden;
@@ -30,8 +31,9 @@
 }
 
 .hero-image {
-  max-width: 420px;
-  height: auto;
+  max-width: 500px;         /* increased from 420px */
+  width: 100%;              /* ensure responsiveness */
+  height: 600px;
   border-radius: 20px;
   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
   background: transparent;
@@ -75,10 +77,10 @@
 }
 
 .hero-btn {
-  background-color: #5c4033;   /* Rich coffee brown */
-  color: #fff;   
+  background-color: #5c4033;
+  color: #fff;
   border: none;
-  padding: 12px 22px;
+  padding: 12px 70px;   /* ⬅️ increased horizontal padding */
   border-radius: 20px;
   font-weight: bold;
   font-size: 1rem;
