@@ -1,0 +1,191 @@
+.guest-modal {
+  max-width: 700px;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #eee;
+}
+
+.tab-button {
+  padding: 1rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #666;
+}
+
+.tab-button:hover {
+  color: #6f4f37;
+}
+
+.tab-button.active {
+  color: #6f4f37;
+  border-bottom-color: #6f4f37;
+}
+
+/* Guest List Tab */
+.guest-list-container {
+  padding: 1.5rem;
+}
+
+.guest-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.search-box {
+  flex: 1;
+  max-width: 300px;
+}
+
+.search-box input {
+  padding: 0.6rem 1rem;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  width: 100%;
+}
+
+.send-invites-btn {
+  background-color: #6f4f37;
+  color: white;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.send-invites-btn:hover {
+  background-color: #543b28;
+}
+
+.no-guests {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+}
+
+.guest-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.guest-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.guest-item:last-child {
+  border-bottom: none;
+}
+
+.guest-info {
+  flex: 1;
+}
+
+.guest-name {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.guest-email {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.guest-status {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.status-badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-attending {
+  background-color: rgba(39, 174, 96, 0.1);
+  color: #27ae60;
+}
+
+.status-declined {
+  background-color: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+}
+
+.status-pending {
+  background-color: rgba(243, 156, 18, 0.1);
+  color: #f39c12;
+}
+
+.delete-guest-btn {
+  background: none;
+  border: none;
+  color: #e74c3c;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 50%;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.delete-guest-btn:hover {
+  opacity: 1;
+  background-color: rgba(231, 76, 60, 0.1);
+}
+
+/* Add Guest Tab */
+.add-guest-container {
+  padding: 1.5rem;
+}
+
+.loading-spinner {
+  margin: 2rem auto;
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(111, 79, 55, 0.2);
+  border-top: 4px solid #6f4f37;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.error-message {
+  color: #e74c3c;
+  margin-top: 1rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  background-color: rgba(231, 76, 60, 0.1);
+}
+
+.success-message {
+  color: #27ae60;
+  margin-top: 1rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  background-color: rgba(39, 174, 96, 0.1);
+}
