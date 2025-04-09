@@ -1,6 +1,4 @@
-//import * as React from 'react';
-import { useState } from 'react';
-//import './Register.css';
+import { useState, useEffect } from 'react';
 
 const app_name = '167.172.31.171';
 
@@ -19,7 +17,22 @@ function Register() {
   const [email, setEmail] = useState('');
   const [loginPassword, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showChecks, setShowChecks] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+
+  const [passwordValidations, setPasswordValidations] = useState({
+    length: false,
+    uppercase: false,
+    number: false,
+  });
+
+  useEffect(() => {
+    setPasswordValidations({
+      length: loginPassword.length >= 6,
+      uppercase: /[A-Z]/.test(loginPassword),
+      number: /\d/.test(loginPassword),
+    });
+  }, [loginPassword]);
 
   async function doRegister(): Promise<void> {
     if (loginPassword !== confirmPassword) {
@@ -57,29 +70,6 @@ function Register() {
     }
   }
 
-  if(isRegistered){
-    return (
-      <div className="register-container">
-        <h2 className="register-title">REGISTRATION SUCCESSFUL</h2>
-        <p style={{ textAlign: 'center', margin: '20px 0' }}>
-          Your account has been created! Please check your email for the verification code.
-        </p>
-        <button 
-          onClick={() => window.location.href = '/verify'} 
-          className="register-button"
-        >
-          Go to Verification
-        </button>
-        <p className="register-footer">
-          Already verified?{' '}
-          <span className="register-link" onClick={() => (window.location.href = '/login')}>
-            Login
-          </span>
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="register-container">
       <h2 className="register-title">REGISTER</h2>
@@ -87,25 +77,39 @@ function Register() {
       <input placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} className="register-input" />
       <input placeholder="Username" value={loginName} onChange={(e) => setLoginName(e.target.value)} className="register-input" />
       <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="register-input" />
-      <input placeholder="Password" type="password" value={loginPassword} onChange={(e) => setPassword(e.target.value)} className="register-input" />
+      <input
+        placeholder="Password"
+        type="password"
+        value={loginPassword}
+        onChange={(e) => {
+          setPassword(e.target.value);
+          setShowChecks(true);
+        }}
+        className="register-input"
+      />
+
+      {showChecks && (
+        <div className="password-checks" style={{ display: 'flex', gap: '10px', fontSize: '0.9rem', margin: '8px 0' }}>
+          <span className={passwordValidations.length ? 'valid' : 'invalid'}>
+            {passwordValidations.length ? '✓' : '✗'} 6+ characters
+          </span>
+          <span className={passwordValidations.uppercase ? 'valid' : 'invalid'}>
+            {passwordValidations.uppercase ? '✓' : '✗'} 1 uppercase
+          </span>
+          <span className={passwordValidations.number ? 'valid' : 'invalid'}>
+            {passwordValidations.number ? '✓' : '✗'} 1 number
+          </span>
+        </div>
+      )}
+
       <input placeholder="Confirm Password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="register-input" />
-      <button onClick={doRegister} className="register-button">Register</button>
       {message && <p className="register-message">{message}</p>}
+
       <p className="register-footer">
         Already have an account?{' '}
-        <span 
-        className="register-link" 
-        onClick={() => (window.location.href = '/login')}
-        style={{
-          color: '#5a3215',
-          textDecoration: 'underline',
-          fontWeight: 'bold',
-          cursor: 'pointer'
-        }}
-      >
-        Login
-      </span>
+        <span className="register-link" onClick={() => (window.location.href = '/login')}>Login</span>
       </p>
+      <button onClick={doRegister} className="register-button">Register</button>
     </div>
   );
 }
