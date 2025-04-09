@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CreateEventModal from '../components/CreateEventModal';
 import GuestManagementModal from '../components/GuestManagementModal';
-import EditEventModal from '../components/EditEventModal'; // Import the new component
+import MapPreview from '../components/MapPreview';
+import EditEventModal from '../components/EditEventModal';
+import { useGuestPolling } from '../hooks/useGuestPolling';
 import './Dashboard.css';
-import logoImage from '/images/coffee_bean.png'; 
+import logoImage from '/images/coffee_bean.png';
 
 // Types
 interface Event {
+  Coordinates: { lat: number; lng: number; } | null | undefined;
   _id: string;
   EventName: string;
   Date: string;
@@ -31,7 +34,7 @@ const Dashboard: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showGuestModal, setShowGuestModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false); // New state for edit modal
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [dropdownStates, setDropdownStates] = useState<{[key: string]: boolean}>({});
   const navigate = useNavigate();
@@ -45,6 +48,14 @@ const Dashboard: React.FC = () => {
       return 'http://localhost:5001/' + route;
     }
   }
+  
+  // Use our custom polling hook for live guest data
+  const { 
+    guestDataMap, 
+    startPollingEvent, 
+    stopPollingEvent, 
+    clearAllPolling 
+  } = useGuestPolling(buildPath);
 
   useEffect(() => {
     // Get user from localStorage
@@ -60,7 +71,22 @@ const Dashboard: React.FC = () => {
 
     // Fetch user's events
     fetchEvents(userData.id);
+    
+    // Clean up on unmount
+    return () => {
+      clearAllPolling();
+    };
   }, [navigate]);
+  
+  // Start polling for all events whenever the events list changes
+  useEffect(() => {
+    if (events.length > 0) {
+      // Start polling for all events
+      events.forEach(event => {
+        startPollingEvent(event._id);
+      });
+    }
+  }, [events]);
 
   // Add this effect to close dropdowns when clicking outside
   useEffect(() => {
@@ -124,6 +150,9 @@ const Dashboard: React.FC = () => {
         throw new Error('Failed to delete event');
       }
 
+      // Stop polling for this event
+      stopPollingEvent(eventId);
+      
       // Remove event from state
       setEvents(events.filter(event => event._id !== eventId));
     } catch (error) {
@@ -152,7 +181,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // New function to open the edit modal
+  // Function to open the edit modal
   const openEditModal = (event: Event) => {
     setSelectedEvent(event);
     setShowEditModal(true);
@@ -222,12 +251,20 @@ const Dashboard: React.FC = () => {
     }
   };
 
-
-
+  // Get guest counts - use live data from polling if available
   const getGuestCounts = (event: Event) => {
+    // Check if we have live polling data for this event
+    if (guestDataMap[event._id]) {
+      const liveData = guestDataMap[event._id];
+      return { 
+        guestCount: liveData.guestCount, 
+        attendingCount: liveData.attendingCount 
+      };
+    }
+    
+    // Fall back to event data if live data isn't available yet
     const guestCount = event.Guests?.length || 0;
     
-    // Improved status check that handles all possible attendance status formats
     const attendingCount = event.Guests?.filter(g => {
       // Check numeric values
       if (g.Status === 1 || g.Status === '1') return true;
@@ -243,31 +280,11 @@ const Dashboard: React.FC = () => {
     
     return { guestCount, attendingCount };
   };
-  
-
-
-useEffect(() => {
-  // Get user from localStorage
-  const userStr = localStorage.getItem('user_data');
-  if (!userStr) {
-    // Redirect to login if no user
-    navigate('/login');
-    return;
-  }
-
-  const userData = JSON.parse(userStr);
-  setUser(userData);
-
-  // Fetch user's events
-  fetchEvents(userData.id);
-    
-  // Clean up on unmount
-}, [navigate]);
 
   if (loading) {
     return (
       <div className="improved-dashboard">
-        <div>
+        <div className="dashboard-header">
           <div className="brand">
             <img src={logoImage} alt="Espresso Events Logo" className="logo" />
             <h1>Espresso Events</h1>
@@ -346,113 +363,125 @@ useEffect(() => {
             </div>
           ) : (
             <div className="events-grid">
-              {filteredEvents.map((event) => {
-                const { guestCount, attendingCount } = getGuestCounts(event);
-                const isPastEvent = new Date(`${event.Date} ${event.Time}`) < new Date();
-                
-                return (
-                  <div 
-                    key={event._id} 
-                    className={`event-card ${isPastEvent ? 'past-event' : ''}`}
-                  >
-                    <div 
-                      className="event-image" 
-                      style={{ 
-                        backgroundImage: event.Image 
-                          ? `url(${event.Image})` 
-                          : 'linear-gradient(135deg, #6F4F37 0%, #A67C52 100%)' 
-                      }}
-                    >
-                      <div className="event-date-tag">
-                        {formatDate(event.Date)}
-                      </div>
-                    </div>
-                    
-                    <div className="event-details">
-                      <h3 className="event-title">{event.EventName}</h3>
-                      
-                      <div className="event-info">
-                        <div className="info-item">
-                          <span className="icon">⏰</span>
-                          <span>{formatTime(event.Time)}</span>
-                        </div>
-                        
-                        <div className="info-item">
-                          <span className="icon">📍</span>
-                          <span>{event.Location}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="event-stats">
-                        <div className="stat-item">
-                          <span className="stat-count">{guestCount}</span>
-                          <span className="stat-label">guests</span>
-                        </div>
-                        
-                        <div className="stat-item">
-                          <span className="stat-count">{attendingCount}</span>
-                          <span className="stat-label">attending</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="event-actions">
-                      <button 
-                        className="view-btn"
-                        onClick={() => openGuestModal(event)}
-                      >
-                        Manage Guests
-                      </button>
-                      
-                      <div className="actions-dropdown">
-                        <button 
-                          className="dropdown-toggle" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Toggle the dropdown for this specific event
-                            const newState = {...dropdownStates};
-                            newState[event._id] = !newState[event._id];
-                            setDropdownStates(newState);
-                          }}
-                        >
-                          •••
-                        </button>
-                        {dropdownStates[event._id] && (
-                          <div className="dropdown-menu">
-                            <button onClick={() => {
-                              handleSendInvites(event._id);
-                              // Keep the menu open after clicking
-                            }}>
-                              Send Invites
-                            </button>
-                            <button onClick={() => {
-                              openEditModal(event);
-                              // Close dropdown after clicking edit
-                              const newState = {...dropdownStates};
-                              newState[event._id] = false;
-                              setDropdownStates(newState);
-                            }}>
-                              Edit Event
-                            </button>
-                            <button 
-                              className="delete-btn"
-                              onClick={() => {
-                                handleDeleteEvent(event._id);
-                                // Close dropdown after clicking delete
-                                const newState = {...dropdownStates};
-                                newState[event._id] = false;
-                                setDropdownStates(newState);
-                              }}
-                            >
-                              Delete Event
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              
+{filteredEvents.map((event) => {
+  const { guestCount, attendingCount } = getGuestCounts(event);
+  const isPastEvent = new Date(`${event.Date} ${event.Time}`) < new Date();
+  
+  return (
+    <div 
+      key={event._id} 
+      className={`event-card ${isPastEvent ? 'past-event' : ''}`}
+    >
+      <div 
+        className="event-image" 
+        style={{ 
+          backgroundImage: event.Image 
+            ? `url(${event.Image})` 
+            : 'linear-gradient(135deg, #6F4F37 0%, #A67C52 100%)' 
+        }}
+      >
+        <div className="event-date-tag">
+          {formatDate(event.Date)}
+        </div>
+      </div>
+      
+      <div className="event-details">
+        <h3 className="event-title">{event.EventName}</h3>
+        
+        <div className="event-info">
+          <div className="info-item">
+            <span className="icon">⏰</span>
+            <span>{formatTime(event.Time)}</span>
+          </div>
+          
+          <div className="info-item">
+            <span className="icon">📍</span>
+            <span>{event.Location}</span>
+          </div>
+        </div>
+        
+        {/* Add Map Preview Here */}
+        {event.Location && (
+          <div className="event-map-preview">
+            <MapPreview 
+              location={event.Location}
+              coordinates={event.Coordinates}
+              height="100px"
+            />
+          </div>
+        )}
+        
+        <div className="event-stats">
+          <div className="stat-item">
+            <span className="stat-count">{guestCount}</span>
+            <span className="stat-label">guests</span>
+          </div>
+          
+          <div className="stat-item">
+            <span className="stat-count">{attendingCount}</span>
+            <span className="stat-label">attending</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="event-actions">
+        <button 
+          className="view-btn"
+          onClick={() => openGuestModal(event)}
+        >
+          Manage Guests
+        </button>
+        
+        <div className="actions-dropdown">
+          <button 
+            className="dropdown-toggle" 
+            onClick={(e) => {
+              e.stopPropagation();
+              // Toggle the dropdown for this specific event
+              const newState = {...dropdownStates};
+              newState[event._id] = !newState[event._id];
+              setDropdownStates(newState);
+            }}
+          >
+            •••
+          </button>
+          {dropdownStates[event._id] && (
+            <div className="dropdown-menu">
+              <button onClick={() => {
+                handleSendInvites(event._id);
+                // Keep the menu open after clicking
+              }}>
+                Send Invites
+              </button>
+              <button onClick={() => {
+                openEditModal(event);
+                // Close dropdown after clicking edit
+                const newState = {...dropdownStates};
+                newState[event._id] = false;
+                setDropdownStates(newState);
+              }}>
+                Edit Event
+              </button>
+              <button 
+                className="delete-btn"
+                onClick={() => {
+                  handleDeleteEvent(event._id);
+                  // Close dropdown after clicking delete
+                  const newState = {...dropdownStates};
+                  newState[event._id] = false;
+                  setDropdownStates(newState);
+                }}
+              >
+                Delete Event
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+})}
             </div>
           )}
         </div>
@@ -475,6 +504,7 @@ useEffect(() => {
           eventId={selectedEvent._id}
           eventName={selectedEvent.EventName}
           onGuestAdded={handleGuestAdded}
+          liveGuestData={guestDataMap[selectedEvent._id]?.guests || []}
         />
       )}
 

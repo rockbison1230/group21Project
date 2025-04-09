@@ -189,3 +189,62 @@
   border-radius: 4px;
   background-color: rgba(39, 174, 96, 0.1);
 }
+
+/* Add these styles to your GuestManagementModal.css file */
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  animation: statusUpdate 0.5s ease;
+}
+
+.status-attending {
+  background-color: rgba(46, 204, 113, 0.2);
+  color: #27ae60;
+}
+
+.status-declined {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+
+.status-pending {
+  background-color: rgba(243, 156, 18, 0.2);
+  color: #f39c12;
+}
+
+@keyframes statusUpdate {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Add style for the event cards stats to highlight changes */
+.event-stats .stat-count {
+  transition: all 0.3s ease;
+}
+
+.event-stats .stat-count.updated {
+  animation: countUpdate 1s ease;
+}
+
+@keyframes countUpdate {
+  0% {
+    color: var(--primary);
+  }
+  50% {
+    color: #27ae60;
+  }
+  100% {
+    color: var(--primary);
+  }
+}

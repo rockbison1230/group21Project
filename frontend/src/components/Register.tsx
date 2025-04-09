@@ -18,7 +18,7 @@ function Register() {
   const [loginPassword, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showChecks, setShowChecks] = useState(false);
-  const [isRegistered, setIsRegistered] = useState(false);
+  const [, setIsRegistered] = useState(false);
 
   const [passwordValidations, setPasswordValidations] = useState({
     length: false,

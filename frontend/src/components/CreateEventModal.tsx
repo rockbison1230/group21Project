@@ -1,11 +1,17 @@
 import  { useState } from 'react';
 import './CreateEventModal.css';
+import LocationPicker from './LocationPicker';
 
 interface CreateEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onEventCreated: () => void;
   userId: string;
+}
+
+interface Coordinates {
+  lat: number;
+  lng: number;
 }
 
 const CreateEventModal: React.FC<CreateEventModalProps> = ({ 
@@ -18,6 +24,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [location, setLocation] = useState('');
+  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,6 +39,15 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
       return 'http://localhost:5001/' + route;
     }
   }
+
+  const handleLocationChange = (locationValue: string, coords?: Coordinates) => {
+    setLocation(locationValue);
+    if (coords) {
+      setCoordinates(coords);
+    } else {
+      setCoordinates(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +73,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
           date,
           time,
           location,
+          coordinates: coordinates || undefined, // Include coordinates if available
           description,
           image
         }),
@@ -76,6 +93,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
         setDate('');
         setTime('');
         setLocation('');
+        setCoordinates(null);
         setDescription('');
         setImage('');
         
@@ -137,15 +155,11 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="form-group location-group">
             <label htmlFor="location">Location*</label>
-            <input
-              id="location"
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Enter event location"
-              required
+            <LocationPicker 
+              initialValue={location}
+              onChange={handleLocationChange}
             />
           </div>
 

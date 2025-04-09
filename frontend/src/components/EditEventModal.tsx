@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './CreateEventModal.css'; // Reuse same CSS
+import LocationPicker from './LocationPicker';
 
 interface EditEventModalProps {
   isOpen: boolean;
@@ -13,7 +14,13 @@ interface EditEventModalProps {
     Location: string;
     Description?: string;
     Image?: string;
+    Coordinates?: { lat: number; lng: number };
   };
+}
+
+interface Coordinates {
+  lat: number;
+  lng: number;
 }
 
 const EditEventModal: React.FC<EditEventModalProps> = ({ 
@@ -27,6 +34,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [location, setLocation] = useState('');
+  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,8 +59,24 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
       setLocation(eventDetails.Location || '');
       setDescription(eventDetails.Description || '');
       setImage(eventDetails.Image || '');
+      
+      // Set coordinates if available in eventDetails
+      if (eventDetails.Coordinates) {
+        setCoordinates(eventDetails.Coordinates);
+      } else {
+        setCoordinates(null);
+      }
     }
   }, [isOpen, eventDetails]);
+
+  const handleLocationChange = (locationValue: string, coords?: Coordinates) => {
+    setLocation(locationValue);
+    if (coords) {
+      setCoordinates(coords);
+    } else {
+      setCoordinates(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +102,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
           date,
           time,
           location,
+          coordinates: coordinates || undefined, // Include coordinates if available
           description,
           image
         }),
@@ -150,15 +175,11 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="form-group location-group">
             <label htmlFor="location">Location*</label>
-            <input
-              id="location"
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Enter event location"
-              required
+            <LocationPicker 
+              initialValue={location}
+              onChange={handleLocationChange}
             />
           </div>
 

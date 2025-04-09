@@ -227,10 +227,20 @@ app.post("/api/getUserEvents", async (req, res) => {
 });
 
 // Add new event
+// Updates for the addEvent endpoint in server.js
 app.post("/api/addEvent", async (req, res) => {
   console.log("Adding new event: ", req.body);
 
-  const { userId, title, date, time, location, image, description } = req.body;
+  const {
+    userId,
+    title,
+    date,
+    time,
+    location,
+    coordinates,
+    image,
+    description,
+  } = req.body;
   let error = "";
 
   if (!userId || !title || !date || !time || !location) {
@@ -257,6 +267,7 @@ app.post("/api/addEvent", async (req, res) => {
       Date: date,
       Time: time,
       Location: location,
+      Coordinates: coordinates || null, // Add coordinates field
       Image: image || "",
       Description: description || "",
       CreatedAt: new Date(),
@@ -270,6 +281,74 @@ app.post("/api/addEvent", async (req, res) => {
     res.status(500).json({
       eventId: -1,
       error: "An error occurred while adding the event.",
+    });
+  }
+});
+
+// Updates for the updateEvent endpoint in server.js
+app.post("/api/updateEvent", async (req, res) => {
+  console.log("Updating event: ", req.body);
+
+  const {
+    eventId,
+    title,
+    date,
+    time,
+    location,
+    coordinates,
+    image,
+    description,
+  } = req.body;
+
+  if (!eventId) {
+    return res
+      .status(400)
+      .json({ event: null, error: "Event ID is required." });
+  }
+
+  try {
+    const db = client.db();
+    const eventsCollection = db.collection("Events");
+
+    let eventIdQuery;
+    if (ObjectId.isValid(eventId)) {
+      eventIdQuery = new ObjectId(eventId);
+    } else {
+      return res.status(400).json({ event: null, error: "Invalid Event ID." });
+    }
+
+    const updateFields = {
+      ...(title && { EventName: title }),
+      ...(date && { Date: date }),
+      ...(time && { Time: time }),
+      ...(location && { Location: location }),
+      // Include coordinates if provided, or null if explicitly provided as null
+      ...(coordinates !== undefined && { Coordinates: coordinates }),
+      ...(image !== undefined && { Image: image }),
+      ...(description !== undefined && { Description: description }),
+      UpdatedAt: new Date(),
+    };
+
+    const result = await eventsCollection.updateOne(
+      { _id: eventIdQuery },
+      { $set: updateFields }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res
+        .status(404)
+        .json({ event: null, error: "Event not found or no changes made." });
+    }
+
+    // Fetch the updated event
+    const updatedEvent = await eventsCollection.findOne({ _id: eventIdQuery });
+
+    res.status(200).json({ event: updatedEvent, error: "" });
+  } catch (err) {
+    console.error("Error updating event:", err);
+    res.status(500).json({
+      event: null,
+      error: "An error occurred while updating the event.",
     });
   }
 });

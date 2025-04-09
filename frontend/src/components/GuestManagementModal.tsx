@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import './GuestManagementModal.css';
 
-interface Guest {
+interface LiveGuest {
   _id: string;
-  FirstName: string;
-  LastName: string;
-  Email: string;
-  Status: string | number;
+  name: string;
+  email: string;
+  status: string | number;
 }
 
 interface GuestManagementModalProps {
@@ -15,6 +14,7 @@ interface GuestManagementModalProps {
   eventId: string;
   eventName: string;
   onGuestAdded: () => void;
+  liveGuestData?: LiveGuest[]; // New prop to receive live guest data
 }
 
 const GuestManagementModal: React.FC<GuestManagementModalProps> = ({
@@ -22,9 +22,10 @@ const GuestManagementModal: React.FC<GuestManagementModalProps> = ({
   onClose,
   eventId,
   eventName,
-  onGuestAdded
+  onGuestAdded,
+  liveGuestData = []
 }) => {
-  const [guests, setGuests] = useState<Guest[]>([]);
+  const [guests, setGuests] = useState<LiveGuest[]>([]);
   const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -44,16 +45,20 @@ const GuestManagementModal: React.FC<GuestManagementModalProps> = ({
     }
   }
 
+  // Update guests when liveGuestData changes
   useEffect(() => {
-    if (isOpen && eventId) {
+    if (liveGuestData && liveGuestData.length > 0) {
+      setGuests(liveGuestData);
+      setLoading(false);
+    } else if (isOpen && eventId) {
+      // If we don't have live data yet, fetch manually
       fetchGuests();
     }
-  }, [isOpen, eventId]);
+  }, [isOpen, eventId, liveGuestData]);
   
-  // Update the fetchGuests function to add a timeout parameter for periodic refreshing
-  const fetchGuests = async (timeout = false) => {
+  const fetchGuests = async () => {
     try {
-      if (!timeout) setLoading(true);
+      setLoading(true);
       const response = await fetch(buildPath('api/searchContacts'), {
         method: 'POST',
         headers: {
@@ -69,19 +74,19 @@ const GuestManagementModal: React.FC<GuestManagementModalProps> = ({
       const data = await response.json();
       
       if (data.results) {
-        setGuests(data.results.map((guest: any) => ({
+        const formattedGuests = data.results.map((guest: any) => ({
           _id: guest.id,
-          FirstName: guest.name.split(' ')[0],
-          LastName: guest.name.split(' ').slice(1).join(' '),
-          Email: guest.email,
-          Status: guest.status
-        })));
+          name: guest.name,
+          email: guest.email,
+          status: guest.status
+        }));
+        setGuests(formattedGuests);
       }
     } catch (error) {
       console.error('Error fetching guests:', error);
-      if (!timeout) setError('Failed to load guest list');
+      setError('Failed to load guest list');
     } finally {
-      if (!timeout) setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -193,9 +198,17 @@ const GuestManagementModal: React.FC<GuestManagementModalProps> = ({
     return 'status-pending';
   };
 
+  // Extract first and last name from full name
+  const extractName = (fullName: string) => {
+    const parts = fullName.split(' ');
+    const firstName = parts[0];
+    const lastName = parts.slice(1).join(' ');
+    return { firstName, lastName };
+  };
+
   const filteredGuests = guests.filter(guest => 
-    `${guest.FirstName} ${guest.LastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    guest.Email.toLowerCase().includes(searchTerm.toLowerCase())
+    guest.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    guest.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (!isOpen) return null;
@@ -250,28 +263,32 @@ const GuestManagementModal: React.FC<GuestManagementModalProps> = ({
               </div>
             ) : (
               <div className="guest-list">
-                {filteredGuests.map(guest => (
-                  <div key={guest._id} className="guest-item">
-                    <div className="guest-info">
-                      <div className="guest-name">
-                        {guest.FirstName} {guest.LastName}
+                {filteredGuests.map(guest => {
+                  const { firstName, lastName } = extractName(guest.name);
+                  
+                  return (
+                    <div key={guest._id} className="guest-item">
+                      <div className="guest-info">
+                        <div className="guest-name">
+                          {firstName} {lastName}
+                        </div>
+                        <div className="guest-email">{guest.email}</div>
                       </div>
-                      <div className="guest-email">{guest.Email}</div>
+                      <div className="guest-status">
+                        <span className={`status-badge ${getStatusClass(guest.status)}`}>
+                          {getStatusLabel(guest.status)}
+                        </span>
+                        <button 
+                          className="delete-guest-btn" 
+                          onClick={() => handleDeleteGuest(guest._id)}
+                          title="Remove Guest"
+                        >
+                          &times;
+                        </button>
+                      </div>
                     </div>
-                    <div className="guest-status">
-                      <span className={`status-badge ${getStatusClass(guest.Status)}`}>
-                        {getStatusLabel(guest.Status)}
-                      </span>
-                      <button 
-                        className="delete-guest-btn" 
-                        onClick={() => handleDeleteGuest(guest._id)}
-                        title="Remove Guest"
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             

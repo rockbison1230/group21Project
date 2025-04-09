@@ -133,11 +133,18 @@ body {
   box-shadow: var(--shadow);
   font-size: 16px;
   transition: all 0.2s ease;
+  color: var(--text-dark); /* Set text color to dark */
+}
+
+.search-input::placeholder {
+  color: var(--text-light); /* Slightly lighter color for placeholder text */
+  opacity: 0.8;
 }
 
 .search-input:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--primary-light);
+  color: var(--text-dark); /* Maintain dark text on focus */
 }
 
 .create-event-btn {
@@ -159,10 +166,9 @@ body {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
-/* Events Section */
 .events-section {
+  width: 100%;
   margin-top: 1.5rem;
-  flex: 1;
 }
 
 .no-events-container {
@@ -170,6 +176,12 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 300px;
+}
+body,
+html,
+#root,
+.improved-dashboard {
+  background-color: transparent !important;
 }
 
 .no-events-content {
@@ -203,16 +215,18 @@ body {
 
 /* Event Card */
 .event-card {
-  background-color: var(--card-bg);
-  backdrop-filter: blur(16px);
-  border-radius: var(--border-radius);
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(5px);
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--card-border);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   transition: all 0.3s ease;
   height: 100%;
   display: flex;
   flex-direction: column;
+  width: 100%; /* Ensure full width in grid cell */
+  margin: 0; /* Remove any margin that might affect layout */
 }
 
 .event-card:hover {
@@ -439,7 +453,13 @@ body {
   }
 
   .dashboard-content {
-    padding: 1rem;
+    width: 100%;
+    max-width: 1200px;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    box-sizing: border-box;
+    margin: 0 auto;
+    padding-top: 80px; /* Space for fixed header */
   }
 
   .events-grid {
@@ -469,19 +489,30 @@ body {
   }
 }
 
-/* Background texture container */
 .background-texture {
   position: fixed;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
-  height: 100%;
-  z-index: -1; /* Place it behind all content */
-  pointer-events: none; /* Don't interfere with clicks */
-  overflow: hidden;
+  height: 100vh;
+  z-index: -10; /* Lower z-index to ensure it's below all content */
+  pointer-events: none;
 }
 
-/* The actual image */
+.background-texture:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f5e6ce 0%, #e4d1ad 100%);
+  opacity: 0.92;
+  z-index: -9;
+}
+
 .background-texture:after {
   content: "";
   position: absolute;
@@ -492,24 +523,54 @@ body {
   background-image: url("/images/coffee-beans-bg.jpg");
   background-size: cover;
   background-position: center;
-  opacity: 0.05; /* Super translucent - adjust as needed */
-  filter: contrast(120%) brightness(90%); /* Optional: enhance the texture */
-}
-
-/* Add a color overlay to better blend with your color scheme */
-.background-texture:before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #f5e6ce 0%, #e4d1ad 100%);
-  opacity: 0.92; /* Adjust to control how much of the texture shows through */
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  opacity: 0.05;
+  filter: contrast(120%) brightness(90%);
+  z-index: -8;
 }
 
 /* Make cards slightly more transparent to show texture */
 .event-card {
   background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(5px);
+}
+
+.event-map-preview {
+  margin: 10px 0;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.event-map-preview:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Make sure the event-card has a bit more height to accommodate the map */
+.event-card {
+  min-height: 400px;
+}
+
+/* Slightly adjust margins on the info section to make space for the map */
+.event-info {
+  margin-bottom: 0.5rem;
+}
+
+/* Make stats display a bit more compact */
+.event-stats {
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .events-grid {
+    grid-template-columns: 1fr; /* Single column on small screens */
+  }
+
+  .dashboard-content {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }

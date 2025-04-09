@@ -15,7 +15,7 @@ function Login() {
   const [message, setMessage] = useState('');
   const [loginName, setLoginName] = useState('');
   const [loginPassword, setPassword] = useState('');
-  const [needsVerification, setNeedsVerification] = useState(false);
+  const [, setNeedsVerification] = useState(false);
 
   async function doLogin(event: React.FormEvent) {
     event.preventDefault();

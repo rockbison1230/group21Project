@@ -162,3 +162,7 @@ textarea {
     gap: 1.25rem;
   }
 }
+
+.form-group.location-group {
+  margin-bottom: 0;
+}
