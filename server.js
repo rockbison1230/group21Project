@@ -3,7 +3,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const { ObjectId } = require("mongodb");
 const nodemailer = require("nodemailer");
-const crypto = require("crypto");
+const crypto = require('crypto');
 const app = express();
 
 app.use(cors());
@@ -29,7 +29,8 @@ async function connectDB() {
       "Available collections in the database:",
       collections.map((collection) => collection.name)
     );
-  } catch (error) {
+  } 
+  catch (error) {
     console.error("Error connecting to MongoDB:", error);
   }
 }
@@ -66,7 +67,7 @@ app.post("/api/register", async (req, res, next) => {
         .json({ id: -1, firstName: "", lastName: "", emailAddress: "", error });
     }
 
-    const verificationToken = crypto.randomBytes(5).toString("hex");
+    const verificationToken = crypto.randomBytes(5).toString('hex');
 
     // add new user
     const newUser = {
@@ -80,6 +81,7 @@ app.post("/api/register", async (req, res, next) => {
     };
 
     const result = await usersCollection.insertOne(newUser);
+    console.log(result.modifiedCount);
     sendVerificationEmail(emailAddress, verificationToken);
 
     const ret = {
@@ -89,7 +91,7 @@ app.post("/api/register", async (req, res, next) => {
       userName,
       password,
       emailAddress,
-      isVerified: false,
+      isVerified: false, 
       error: "",
     };
 
@@ -97,14 +99,9 @@ app.post("/api/register", async (req, res, next) => {
   } catch (err) {
     console.error("Error during registration:", err);
     error = "An error occurred during registration.";
-    res.status(500).json({
-      id: -1,
-      firstName: "",
-      lastName: "",
-      emailAddress: "",
-      isVerified: false,
-      error,
-    });
+    res
+      .status(500)
+      .json({ id: -1, firstName: "", lastName: "", emailAddress: "", isVerified: false, error });
   }
 });
 
@@ -145,24 +142,10 @@ app.post("/api/login", async (req, res, next) => {
 
   if (!isVerified) {
     error = "Email verification is required before login.";
-    return res.status(400).json({
-      id: -1,
-      firstName: "",
-      lastName: "",
-      email: "",
-      isVerified: false,
-      error,
-    });
+    return res.status(400).json({ id: -1, firstName: "", lastName: "", email: "", isVerified: false, error });
   }
 
-  var ret = {
-    id: id,
-    firstName: fn,
-    lastName: ln,
-    email: email,
-    isVerified: isVerified,
-    error: "",
-  };
+  var ret = { id: id, firstName: fn, lastName: ln, email: email, isVerified: isVerified, error: "" };
   res.status(200).json(ret);
 });
 
@@ -220,46 +203,35 @@ app.post("/api/getUserEvents", async (req, res) => {
     res.status(200).json({ events: eventsWithGuests, error: "" });
   } catch (err) {
     console.error("Error fetching events:", err);
-    res
-      .status(500)
-      .json({ events: [], error: "An error occurred while fetching events." });
+    res.status(500).json({ events: [], error: "An error occurred while fetching events." });
   }
 });
 
 // Add new event
-// Updates for the addEvent endpoint in server.js
 app.post("/api/addEvent", async (req, res) => {
   console.log("Adding new event: ", req.body);
 
-  const {
-    userId,
-    title,
-    date,
-    time,
-    location,
-    coordinates,
-    image,
-    description,
-  } = req.body;
+  const { userId, title, date, time, location, image, description } = req.body;
   let error = "";
 
   if (!userId || !title || !date || !time || !location) {
-    return res
-      .status(400)
-      .json({ eventId: -1, error: "Required fields missing." });
+    return res.status(400).json({ eventId: -1, error: "Required fields missing." });
   }
 
   try {
     const db = client.db();
     const eventsCollection = db.collection("Events");
 
-    // Convert HostID to ObjectId if it's a valid string representation
-    let hostIdQuery;
-    if (ObjectId.isValid(userId)) {
-      hostIdQuery = new ObjectId(userId);
-    } else {
-      hostIdQuery = userId; // If userId isn't valid, we keep it as is
-    }
+      // Convert HostID to ObjectId if it's a valid string representation
+      let hostIdQuery;
+      if (ObjectId.isValid(userId)) 
+      {
+        hostIdQuery = new ObjectId(userId);
+      } 
+      else 
+      {
+        hostIdQuery = userId; // If userId isn't valid, we keep it as is
+      }
 
     const newEvent = {
       HostID: hostIdQuery, // Changed to HostID
@@ -267,7 +239,6 @@ app.post("/api/addEvent", async (req, res) => {
       Date: date,
       Time: time,
       Location: location,
-      Coordinates: coordinates || null, // Add coordinates field
       Image: image || "",
       Description: description || "",
       CreatedAt: new Date(),
@@ -278,78 +249,7 @@ app.post("/api/addEvent", async (req, res) => {
     res.status(200).json({ eventId: result.insertedId, error: "" });
   } catch (err) {
     console.error("Error adding event:", err);
-    res.status(500).json({
-      eventId: -1,
-      error: "An error occurred while adding the event.",
-    });
-  }
-});
-
-// Updates for the updateEvent endpoint in server.js
-app.post("/api/updateEvent", async (req, res) => {
-  console.log("Updating event: ", req.body);
-
-  const {
-    eventId,
-    title,
-    date,
-    time,
-    location,
-    coordinates,
-    image,
-    description,
-  } = req.body;
-
-  if (!eventId) {
-    return res
-      .status(400)
-      .json({ event: null, error: "Event ID is required." });
-  }
-
-  try {
-    const db = client.db();
-    const eventsCollection = db.collection("Events");
-
-    let eventIdQuery;
-    if (ObjectId.isValid(eventId)) {
-      eventIdQuery = new ObjectId(eventId);
-    } else {
-      return res.status(400).json({ event: null, error: "Invalid Event ID." });
-    }
-
-    const updateFields = {
-      ...(title && { EventName: title }),
-      ...(date && { Date: date }),
-      ...(time && { Time: time }),
-      ...(location && { Location: location }),
-      // Include coordinates if provided, or null if explicitly provided as null
-      ...(coordinates !== undefined && { Coordinates: coordinates }),
-      ...(image !== undefined && { Image: image }),
-      ...(description !== undefined && { Description: description }),
-      UpdatedAt: new Date(),
-    };
-
-    const result = await eventsCollection.updateOne(
-      { _id: eventIdQuery },
-      { $set: updateFields }
-    );
-
-    if (result.modifiedCount === 0) {
-      return res
-        .status(404)
-        .json({ event: null, error: "Event not found or no changes made." });
-    }
-
-    // Fetch the updated event
-    const updatedEvent = await eventsCollection.findOne({ _id: eventIdQuery });
-
-    res.status(200).json({ event: updatedEvent, error: "" });
-  } catch (err) {
-    console.error("Error updating event:", err);
-    res.status(500).json({
-      event: null,
-      error: "An error occurred while updating the event.",
-    });
+    res.status(500).json({ eventId: -1, error: "An error occurred while adding the event." });
   }
 });
 
@@ -361,9 +261,7 @@ app.post("/api/deleteEvent", async (req, res) => {
   let error = "";
 
   if (!eventId || !userId) {
-    return res
-      .status(400)
-      .json({ success: false, error: "Event ID and User ID are required." });
+    return res.status(400).json({ success: false, error: "Event ID and User ID are required." });
   }
 
   try {
@@ -374,9 +272,7 @@ app.post("/api/deleteEvent", async (req, res) => {
       eventObjectId = new ObjectId(eventId);
       userObjectId = new ObjectId(userId);
     } else {
-      return res
-        .status(400)
-        .json({ success: false, error: "Invalid Event ID or User ID." });
+      return res.status(400).json({ success: false, error: "Invalid Event ID or User ID." });
     }
 
     const db = client.db();
@@ -391,18 +287,11 @@ app.post("/api/deleteEvent", async (req, res) => {
 
     if (deleteResult.deletedCount === 0) {
       // Either event not found or user doesn't own it
-      const eventExists = await eventsCollection.findOne({
-        _id: eventObjectId,
-      });
+      const eventExists = await eventsCollection.findOne({ _id: eventObjectId });
       if (eventExists) {
-        return res.status(403).json({
-          success: false,
-          error: "You are not authorized to delete this event.",
-        });
+        return res.status(403).json({ success: false, error: "You are not authorized to delete this event." });
       } else {
-        return res
-          .status(404)
-          .json({ success: false, error: "Event not found." });
+        return res.status(404).json({ success: false, error: "Event not found." });
       }
     }
 
@@ -412,10 +301,7 @@ app.post("/api/deleteEvent", async (req, res) => {
     res.status(200).json({ success: true, error: "" });
   } catch (err) {
     console.error("Error deleting event:", err);
-    res.status(500).json({
-      success: false,
-      error: "An error occurred while deleting the event.",
-    });
+    res.status(500).json({ success: false, error: "An error occurred while deleting the event." });
   }
 });
 
@@ -448,15 +334,11 @@ app.post("/api/searchContacts", async (req, res, next) => {
     // Modify query to return all guests under the eventId if search is empty
     const query = {
       EventID: { $in: [eventIdQuery, eventId, eventIdString] },
-      ...(search
-        ? {
-            $or: [
-              { FirstName: new RegExp(search, "i") },
-              { LastName: new RegExp(search, "i") },
-              { Email: new RegExp(search, "i") },
-            ],
-          }
-        : {}),
+      ...(search ? { $or: [
+        { FirstName: new RegExp(search, "i") },
+        { LastName: new RegExp(search, "i") },
+        { Email: new RegExp(search, "i") },
+      ] } : {})
     };
 
     const results = await contactsCollection.find(query).toArray();
@@ -471,10 +353,7 @@ app.post("/api/searchContacts", async (req, res, next) => {
 
     res.status(200).json({ results: contacts, error: "" });
   } catch (err) {
-    res.status(500).json({
-      results: [],
-      error: "An error occurred while searching contacts.",
-    });
+    res.status(500).json({ results: [], error: "An error occurred while searching contacts." });
   }
 });
 
@@ -507,16 +386,14 @@ app.post("/api/searchEvents", async (req, res, next) => {
     // Modify query to return all events under the hostId if search is empty
     const query = {
       HostID: { $in: [hostIdQuery, hostId, hostIdString] },
-      ...(search
-        ? {
-            $or: [
-              { EventName: new RegExp(search, "i") },
-              { Location: new RegExp(search, "i") },
-              { Description: new RegExp(search, "i") },
-              { Date: new RegExp(search, "i") },
-            ],
-          }
-        : {}),
+      ...(search ? {
+        $or: [
+          { EventName: new RegExp(search, "i") },
+          { Location: new RegExp(search, "i") },
+          { Description: new RegExp(search, "i") },
+          { Date: new RegExp(search, "i") }, 
+        ],
+      } : {}),
     };
 
     const results = await eventsCollection.find(query).toArray();
@@ -533,12 +410,10 @@ app.post("/api/searchEvents", async (req, res, next) => {
 
     res.status(200).json({ results: events, error: "" });
   } catch (err) {
-    res.status(500).json({
-      results: [],
-      error: "An error occurred while searching events.",
-    });
+    res.status(500).json({ results: [], error: "An error occurred while searching events." });
   }
 });
+
 
 // Delete contact
 app.post("/api/deleteContacts", async (req, res, next) => {
@@ -548,9 +423,7 @@ app.post("/api/deleteContacts", async (req, res, next) => {
 
   if (!contactId) {
     console.error("Error: Missing contactId.");
-    return res
-      .status(400)
-      .json({ success: false, error: "Missing contactId." });
+    return res.status(400).json({ success: false, error: "Missing contactId." });
   }
 
   try {
@@ -562,30 +435,21 @@ app.post("/api/deleteContacts", async (req, res, next) => {
       contactIdQuery = new ObjectId(contactId);
     } else {
       console.error("Error: Invalid contactId format.");
-      return res
-        .status(400)
-        .json({ success: false, error: "Invalid contactId format." });
+      return res.status(400).json({ success: false, error: "Invalid contactId format." });
     }
 
-    const deleteResult = await contactsCollection.deleteOne({
-      _id: contactIdQuery,
-    });
+    const deleteResult = await contactsCollection.deleteOne({ _id: contactIdQuery });
 
     if (deleteResult.deletedCount === 1) {
       console.log("Successfully deleted contact:", contactId);
-      res
-        .status(200)
-        .json({ success: true, message: "Contact deleted successfully." });
+      res.status(200).json({ success: true, message: "Contact deleted successfully." });
     } else {
       console.log("No contact found with the given contactId.");
       res.status(404).json({ success: false, error: "Contact not found." });
     }
   } catch (err) {
     console.error("Error deleting contact:", err);
-    res.status(500).json({
-      success: false,
-      error: "An error occurred while deleting the contact.",
-    });
+    res.status(500).json({ success: false, error: "An error occurred while deleting the contact." });
   }
   // test data
   // "EventID": "ObjectId('67bd434d293afd96eae2e86b')",
@@ -594,6 +458,7 @@ app.post("/api/deleteContacts", async (req, res, next) => {
   // "Phone": "123-123-1234",
   // "Status": 1
 });
+
 
 // Update guest status
 app.post("/api/updateGuestStatus", async (req, res) => {
@@ -664,24 +529,16 @@ app.post("/api/updateGuestStatus", async (req, res) => {
 
 // Handling GET request for updateGuestStatus
 app.get("/api/updateGuestStatus", async (req, res) => {
-  console.log("GET request - Updating guest status with params:", req.query);
+  console.log("GET request - Updating guest status");
 
   const { eventId, guestId, status } = req.query;
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  let error = "";
+
   if (!eventId || !guestId || !status) {
-    return res.status(400).send(`
-      <html><head><title>Error</title><style>
-        body{font-family:Arial;background:#f5e6ce;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
-        .container{max-width:500px;padding:30px;background:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);text-align:center}
-        .header{color:#e74c3c;font-size:24px;margin-bottom:20px}
-        .footer{margin-top:30px;font-size:14px;color:#777}
-        .footer a{color:#6F4F37;text-decoration:none;font-weight:bold}
-      </style></head><body><div class="container">
-        <div class="header">Missing Information</div>
-        <div>Required parameters are missing. Please check the invite link.</div>
-        <div class="footer">Powered by <a href="http://espressoevents.xyz">Espresso Events</a></div>
-      </div></body></html>
-    `);
+    return res.status(400).json({
+      success: false,
+      error: "Event ID, Guest ID, and Status are required.",
+    });
   }
 
   try {
@@ -692,147 +549,79 @@ app.get("/api/updateGuestStatus", async (req, res) => {
       eventObjectId = new ObjectId(eventId);
       guestObjectId = new ObjectId(guestId);
     } else {
-      return res.status(400).send(`
-        <html><head><title>Error</title><style>
-          body{font-family:Arial;background:#f5e6ce;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
-          .container{max-width:500px;padding:30px;background:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);text-align:center}
-          .header{color:#e74c3c;font-size:24px;margin-bottom:20px}
-          .footer{margin-top:30px;font-size:14px;color:#777}
-          .footer a{color:#6F4F37;text-decoration:none;font-weight:bold}
-        </style></head><body><div class="container">
-          <div class="header">Invalid Link</div>
-          <div>The invitation link appears to be invalid. Please contact the event organizer.</div>
-          <div class="footer">Powered by <a href="http://espressoevents.xyz">Espresso Events</a></div>
-        </div></body></html>
-      `);
+      return res.status(400).json({
+        success: false,
+        error: "Invalid Event ID or Guest ID.",
+      });
     }
 
     const db = client.db();
     const guestsCollection = db.collection("Guests");
-    const eventsCollection = db.collection("Events");
 
-    // Find the guest with more flexible query
+    // Check if the guest exists for this event
     const guest = await guestsCollection.findOne({
       _id: guestObjectId,
+      EventID: eventObjectId, // Use ObjectId here
     });
 
     if (!guest) {
-      return res.status(404).send(`
-        <html><head><title>Error</title><style>
-          body{font-family:Arial;background:#f5e6ce;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
-          .container{max-width:500px;padding:30px;background:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);text-align:center}
-          .header{color:#e74c3c;font-size:24px;margin-bottom:20px}
-          .footer{margin-top:30px;font-size:14px;color:#777}
-          .footer a{color:#6F4F37;text-decoration:none;font-weight:bold}
-        </style></head><body><div class="container">
-          <div class="header">Not Found</div>
-          <div>We couldn't find your invitation. Please contact the event organizer.</div>
-          <div class="footer">Powered by <a href="http://espressoevents.xyz">Espresso Events</a></div>
-        </div></body></html>
-      `);
+      return res.status(404).json({
+        success: false,
+        error: "Guest not found for this event.",
+      });
     }
 
-    // Get event details if possible
-    let eventName = "this event";
-    try {
-      if (guest.EventID) {
-        const eventIdToUse = ObjectId.isValid(guest.EventID)
-          ? guest.EventID
-          : new ObjectId(
-              guest.EventID.toString().replace(/ObjectId\(['"](.+)['"]\)/, "$1")
-            );
-
-        const event = await eventsCollection.findOne({ _id: eventIdToUse });
-        if (event && event.EventName) {
-          eventName = event.EventName;
-        }
-      }
-    } catch (err) {
-      console.log("Error getting event name:", err);
-    }
-
-    // Update the guest status without checking EventID match
-    await guestsCollection.updateOne(
-      { _id: guestObjectId },
+    // Update the guest status and add UpdatedAt
+    const updateResult = await guestsCollection.updateOne(
+      { _id: guestObjectId, EventID: eventObjectId }, // Use ObjectId here
       { $set: { Status: status, UpdatedAt: new Date() } }
     );
 
-    // Return success page with appropriate message based on status
-    const headerColor = status === "1" ? "#27ae60" : "#e74c3c";
-    const headerText = status === "1" ? "Thank You!" : "Response Recorded";
-    const message =
-      status === "1"
-        ? `Thank you for accepting the invitation to ${eventName}. We look forward to seeing you!`
-        : `We've recorded that you won't be able to attend ${eventName}. Thanks for letting us know.`;
+    if (updateResult.modifiedCount === 0) {
+      return res.status(500).json({
+        success: false,
+        error: "Failed to update guest status.",
+      });
+    }
 
-    return res.status(200).send(`
-      <html><head><title>RSVP Confirmation</title><style>
-        body{font-family:Arial;background:#f5e6ce;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
-        .container{max-width:500px;padding:30px;background:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);text-align:center}
-        .header{color:${headerColor};font-size:28px;margin-bottom:20px}
-        .message{font-size:16px;line-height:1.6;margin-bottom:20px}
-        .footer{margin-top:30px;font-size:14px;color:#777}
-        .footer a{color:#6F4F37;text-decoration:none;font-weight:bold}
-      </style></head><body><div class="container">
-        <div class="header">${headerText}</div>
-        <div class="message">${message}</div>
-        <div class="footer">Powered by <a href="http://espressoevents.xyz">Espresso Events</a></div>
-      </div></body></html>
-    `);
+    res.status(200).json({ success: true, error: "" });
   } catch (err) {
     console.error("Error updating guest status:", err);
-    return res.status(500).send(`
-      <html><head><title>Error</title><style>
-        body{font-family:Arial;background:#f5e6ce;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
-        .container{max-width:500px;padding:30px;background:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);text-align:center}
-        .header{color:#e74c3c;font-size:24px;margin-bottom:20px}
-        .footer{margin-top:30px;font-size:14px;color:#777}
-        .footer a{color:#6F4F37;text-decoration:none;font-weight:bold}
-      </style></head><body><div class="container">
-        <div class="header">Something Went Wrong</div>
-        <div>We encountered an error processing your response. Please try again or contact the event organizer.</div>
-        <div class="footer">Powered by <a href="http://espressoevents.xyz">Espresso Events</a></div>
-      </div></body></html>
-    `);
+    res.status(500).json({
+      success: false,
+      error: "An error occurred while updating the guest status.",
+    });
   }
 });
 
-// Add this to your server.js
-app.get("/api/respondToInvite", (req, res) => {
-  // Just redirect to the working endpoint with the same parameters
-  const { eventId, guestId, status } = req.query;
-  res.setHeader("Content-Type", "text/html");
-  res.redirect(
-    `/api/updateGuestStatus?eventId=${eventId}&guestId=${guestId}&status=${status}`
-  );
-});
 
 async function sendVerificationEmail(emailAddress, verificationToken) {
   const transporter = nodemailer.createTransport({
-    service: "gmail",
+    service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
   });
 
+
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: emailAddress,
-    subject: "Espresso Events Email Verification",
+    subject: 'Espresso Events Email Verification',
     text: `Please use this code to finish your registration ${verificationToken}`,
   };
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log("sent verification email");
+    console.log('sent verification email');
   } catch (error) {
-    console.error("error sending mail: ", error);
+    console.error('error sending mail: ', error);
   }
 }
 
 // on successful verification route to login?
-app.post("/api/verify", async (req, res) => {
+app.post('/api/verify', async (req, res) => {
   const { vToken } = req.body;
   console.log(req.body);
   console.log(vToken);
@@ -843,7 +632,7 @@ app.post("/api/verify", async (req, res) => {
   const user = await usersCollection.findOne({ vToken: vToken });
 
   if (!user) {
-    return res.status(400).json({ message: "Invalid token" });
+    return res.status(400).json({ message: 'Invalid token' });
   }
 
   try {
@@ -853,52 +642,50 @@ app.post("/api/verify", async (req, res) => {
     );
     console.log(user.FirstName);
     //console.log(token);
-    res.status(200).json({ message: "Verification Successful!" });
+    res.status(200).json({ message: 'Verification Successful!' });
   } catch (err) {
-    console.error("Error updating user: ", err);
-    res.status(500).json({ message: "Internal server error" });
+    console.error('Error updating user: ', err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-app.post("/api/sendGuestInvite", async (req, res) => {
+
+app.post('/api/sendGuestInvite', async (req, res) => {
   const { eventId } = req.body;
 
   if (!eventId) {
-    return res.status(400).json({ error: "Missing eventId" });
+    return res.status(400).json({ error: 'Missing eventId' });
   }
 
   try {
     let eventIdQuery;
     if (ObjectId.isValid(eventId)) {
-      eventIdQuery = new ObjectId(eventId); // Corrected: Convert eventId to ObjectId
+      eventIdQuery = new ObjectId(eventId);  // Corrected: Convert eventId to ObjectId
     } else {
       // If eventId is not a valid ObjectId, return an error
-      return res.status(400).json({ error: "Invalid eventId format" });
+      return res.status(400).json({ error: 'Invalid eventId format' });
     }
 
     const db = client.db();
 
     // Fetch event details from the Events collection
-    const event = await db.collection("Events").findOne({ _id: eventIdQuery });
+    const event = await db.collection('Events').findOne({ _id: eventIdQuery });
 
     if (!event) {
-      return res.status(404).json({ error: "Event not found" });
+      return res.status(404).json({ error: 'Event not found' });
     }
 
     console.log(`Sending invites for Event: ${event.EventName}`);
 
     // Fetch guests for the event
-    const guests = await db
-      .collection("Guests")
-      .find({ EventID: eventIdQuery })
-      .toArray();
+    const guests = await db.collection('Guests').find({ EventID: eventIdQuery }).toArray();
 
     if (!guests.length) {
-      return res.status(404).json({ error: "No guests found for this event" });
+      return res.status(404).json({ error: 'No guests found for this event' });
     }
 
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -910,14 +697,16 @@ app.post("/api/sendGuestInvite", async (req, res) => {
 
       // const approveUrl = `http://localhost:5001/api/updateGuestStatus?eventId=${eventId}&guestId=${guest._id}&status=1`;
       // const rejectUrl = `http://localhost:5001/api/updateGuestStatus?eventId=${eventId}&guestId=${guest._id}&status=0`;
-
+      
       const approveUrl = `http://espressoevents.xyz:5001/api/updateGuestStatus?eventId=${eventId}&guestId=${guest._id}&status=1`;
       const rejectUrl = `http://espressoevents.xyz:5001/api/updateGuestStatus?eventId=${eventId}&guestId=${guest._id}&status=0`;
+
+
 
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: guest.Email,
-        subject: "Please RSVP here!",
+        subject: 'Please RSVP here!',
         html: `
           <style>
             body { font-family: Arial, sans-serif; background-color: #f5f5f5; color: #333; }
@@ -943,9 +732,7 @@ app.post("/api/sendGuestInvite", async (req, res) => {
               <p><strong>Date:</strong> ${event.Date}</p>
               <p><strong>Time:</strong> ${event.Time}</p>
               <p><strong>Location:</strong> ${event.Location}</p>
-              <p><strong>Description:</strong> ${
-                event.Description || "No description provided"
-              }</p>
+              <p><strong>Description:</strong> ${event.Description || "No description provided"}</p>
             </div>
             <div>
               <a href="${approveUrl}" class="button approve">Yes!</a>
@@ -961,10 +748,10 @@ app.post("/api/sendGuestInvite", async (req, res) => {
       await transporter.sendMail(mailOptions);
     }
 
-    res.json({ message: "Invites sent to all guests for the event" });
+    res.json({ message: 'Invites sent to all guests for the event' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to send invites" });
+    res.status(500).json({ error: 'Failed to send invites' });
   }
 });
 
@@ -990,9 +777,7 @@ app.post("/api/addGuest", async (req, res) => {
     if (ObjectId.isValid(eventId)) {
       eventIdObj = new ObjectId(eventId);
     } else {
-      return res
-        .status(400)
-        .json({ contactId: -1, error: "Invalid event ID." });
+      return res.status(400).json({ contactId: -1, error: "Invalid event ID." });
     }
 
     // Check if the event exists
@@ -1035,15 +820,14 @@ app.post("/api/addGuest", async (req, res) => {
   }
 });
 
+
 app.post("/api/updateEvent", async (req, res) => {
   console.log("Updating event: ", req.body);
 
   const { eventId, title, date, time, location, image, description } = req.body;
 
   if (!eventId) {
-    return res
-      .status(400)
-      .json({ event: null, error: "Event ID is required." });
+    return res.status(400).json({ event: null, error: "Event ID is required." });
   }
 
   try {
@@ -1073,50 +857,43 @@ app.post("/api/updateEvent", async (req, res) => {
     );
 
     if (result.modifiedCount === 0) {
-      return res
-        .status(404)
-        .json({ event: null, error: "Event not found or no changes made." });
+      return res.status(404).json({ event: null, error: "Event not found or no changes made." });
     }
 
     // Fetch the updated event
     const updatedEvent = await eventsCollection.findOne({ _id: eventIdQuery });
 
     res.status(200).json({ event: updatedEvent, error: "" });
+
   } catch (err) {
     console.error("Error updating event:", err);
-    res.status(500).json({
-      event: null,
-      error: "An error occurred while updating the event.",
-    });
+    res.status(500).json({ event: null, error: "An error occurred while updating the event." });
   }
 });
 
-app.post("/api/sendPasswordReset", async (req, res) => {
+app.post('/api/sendPasswordReset', async (req, res) => {
   const { emailAddress } = req.body;
   console.log(req.body);
 
   if (!emailAddress) {
-    return res.status(400).json({ error: "Missing email address" });
+    return res.status(400).json({ error: 'Missing email address'});
   }
 
   try {
     const db = client.db();
 
-    const currUser = await db
-      .collection("Users")
-      .findOne({ Email: emailAddress });
+    const currUser = await db.collection('Users').findOne({ Email: emailAddress});
 
     if (!currUser) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({error: 'User not found'})
     }
 
-    const resetToken = crypto.randomBytes(5).toString("hex");
-    await db
-      .collection("Users")
-      .updateOne({ Email: emailAddress }, { $set: { vToken: resetToken } });
+    const resetToken = crypto.randomBytes(5).toString('hex');
+    await db.collection('Users').updateOne({ Email: emailAddress }, { $set: {vToken: resetToken}});
 
     //const user = await db.collection('Users').findOne({ Email: emailAddress });
     //console.log('User found:', user);
+
 
     /*
     if (updateResult.modifiedCount === 0) {
@@ -1126,7 +903,7 @@ app.post("/api/sendPasswordReset", async (req, res) => {
     //console.log(resetToken);
     */
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -1138,15 +915,15 @@ app.post("/api/sendPasswordReset", async (req, res) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: emailAddress,
-      subject: "Reset Your Password",
+      subject: 'Reset Your Password',
       html: `<p>Click <a href="${resetUrl}">here</a> to reset your password</p>`,
     };
 
     await transporter.sendMail(mailOptions);
-    res.status(200).json({ error: "" });
+    res.status(200).json({ error: ""});
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to send reset link" });
+    res.status(500).json({ error: 'Failed to send reset link'});
   }
 });
 
@@ -1155,7 +932,7 @@ app.post("/api/resetPassword/", async (req, res) => {
   console.log(req.body);
 
   if (!newPassword) {
-    return res.status(400).json({ error: "password is missing." });
+    return res.status(400).json({ error: "password is missing."});
   }
 
   try {
@@ -1170,9 +947,9 @@ app.post("/api/resetPassword/", async (req, res) => {
       return res.status(400).json({ error: "Invalid user Id."});
     }
     */
-    const currUser = await usersCollection.findOne({ vToken: token });
+    const currUser = await usersCollection.findOne({ vToken: token});
     //console.log(currUser.vToken);
-
+    
     //console.log(currUser.Password);
     /*
     const currUser = await usersCollection.findOneAndUpdate(
@@ -1188,19 +965,16 @@ app.post("/api/resetPassword/", async (req, res) => {
     );
     */
     //console.log(currUser.FirstName);
-
+    
     if (!currUser) {
-      return res.status(400).json({ message: "Invalid token" });
+      return res.status(400).json({message: 'Invalid token'});
     }
-    await usersCollection.updateOne(
-      { vToken: token },
-      { $set: { Password: newPassword, vToken: null } }
-    );
+    await usersCollection.updateOne({ vToken: token}, {$set: {Password: newPassword, vToken: null}})
 
-    res.status(200).json({ error: "" });
+    res.status(200).json({error: ""});
   } catch (err) {
     console.error("Error connecting to user: ", err);
-    res.status(500).json({ error: "Error fetching user" });
+    res.status(500).json({error: "Error fetching user"});
   }
 });
 
