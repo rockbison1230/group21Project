@@ -754,13 +754,14 @@ async function sendVerificationEmail(emailAddress, verificationToken) {
 
 // on successful verification route to login?
 app.post("/api/verify", async (req, res) => {
-  const { token } = req.body;
-  console.log("api reached");
+  const { vToken } = req.body;
+  console.log(req.body);
+  console.log(vToken);
 
   const db = client.db();
   const usersCollection = db.collection("Users");
 
-  const user = await usersCollection.findOne({ vToken: token });
+  const user = await usersCollection.findOne({ vToken: vToken });
 
   if (!user) {
     return res.status(400).json({ message: "Invalid token" });
@@ -771,6 +772,8 @@ app.post("/api/verify", async (req, res) => {
       { _id: new ObjectId(user._id) },
       { $set: { isVerified: true, vToken: null } }
     );
+    console.log(user.FirstName);
+    //console.log(token);
     res.status(200).json({ message: "Verification Successful!" });
   } catch (err) {
     console.error("Error updating user: ", err);
@@ -1006,6 +1009,119 @@ app.post("/api/updateEvent", async (req, res) => {
       event: null,
       error: "An error occurred while updating the event.",
     });
+  }
+});
+
+app.post("/api/sendPasswordReset", async (req, res) => {
+  const { emailAddress } = req.body;
+  console.log(req.body);
+
+  if (!emailAddress) {
+    return res.status(400).json({ error: "Missing email address" });
+  }
+
+  try {
+    const db = client.db();
+
+    const currUser = await db
+      .collection("Users")
+      .findOne({ Email: emailAddress });
+
+    if (!currUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const resetToken = crypto.randomBytes(5).toString("hex");
+    await db
+      .collection("Users")
+      .updateOne({ Email: emailAddress }, { $set: { vToken: resetToken } });
+
+    //const user = await db.collection('Users').findOne({ Email: emailAddress });
+    //console.log('User found:', user);
+
+    /*
+    if (updateResult.modifiedCount === 0) {
+      res.status(404).json({error: "user not found"});
+    }
+    //console.log(currUser.vToken);
+    //console.log(resetToken);
+    */
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const resetUrl = `http://localhost:5001/frontend/src/resetPassword?vToken=${resetToken}`;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: emailAddress,
+      subject: "Reset Your Password",
+      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password</p>`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ error: "" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to send reset link" });
+  }
+});
+
+app.post("/api/resetPassword/", async (req, res) => {
+  const { token, newPassword } = req.body;
+  console.log(req.body);
+
+  if (!newPassword) {
+    return res.status(400).json({ error: "password is missing." });
+  }
+
+  try {
+    const db = client.db();
+    const usersCollection = db.collection("Users");
+
+    /*
+    let userIdQuery;
+    if (ObjectId.isValid(userId)) {
+      userIdQuery = new ObjectId(userId);
+    } else {
+      return res.status(400).json({ error: "Invalid user Id."});
+    }
+    */
+    const currUser = await usersCollection.findOne({ vToken: token });
+    //console.log(currUser.vToken);
+
+    //console.log(currUser.Password);
+    /*
+    const currUser = await usersCollection.findOneAndUpdate(
+      {
+        vToken: token,
+      },
+      {
+        $set: {
+          Password: newPassword,
+          vToken: null
+        }
+      }
+    );
+    */
+    //console.log(currUser.FirstName);
+
+    if (!currUser) {
+      return res.status(400).json({ message: "Invalid token" });
+    }
+    await usersCollection.updateOne(
+      { vToken: token },
+      { $set: { Password: newPassword, vToken: null } }
+    );
+
+    res.status(200).json({ error: "" });
+  } catch (err) {
+    console.error("Error connecting to user: ", err);
+    res.status(500).json({ error: "Error fetching user" });
   }
 });
 

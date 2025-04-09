@@ -50,66 +50,39 @@ function Login() {
   }
 
   return (
-    <div className="login-container">
-      <h2 className="login-title">PLEASE LOG IN</h2>
-      <form onSubmit={doLogin}>
-        <div className="input-group">
-          <input
-            type="text"
-            className="login-input"
-            placeholder="Username"
-            value={loginName}
-            onChange={(e) => setLoginName(e.target.value)}
-          />
-        </div>
-        <div className="input-group">
-          <input
-            type="password"
-            className="login-input"
-            placeholder="Password"
-            value={loginPassword}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        <button type="submit" className="login-button">
-          Do It
-        </button>
-        {message && <p className="error-message">{message}</p>}
-        
-        {needsVerification && (
-          <div style={{ marginTop: '15px', textAlign: 'center' }}>
-            <button 
-              onClick={(e) => {
-                e.preventDefault();
-                window.location.href = '/verify';
-              }} 
-              className="login-button"
-              style={{ backgroundColor: '#4CAF50' }}
-            >
-              Go to Verification
-            </button>
+    <div className="login-wrapper"> {/* Wrapper added here */}
+      <div className="login-container">
+        <h2 className="login-title">Welcome Back!</h2>
+        <form onSubmit={doLogin}>
+          <div className="login-input-group">
+            <div className="input-group">
+              <input
+                type="text"
+                className="login-input"
+                placeholder="Username"
+                value={loginName}
+                onChange={(e) => setLoginName(e.target.value)}
+              />
+            </div>
+            <div className="input-group">
+              <input
+                type="password"
+                className="login-input"
+                placeholder="Password"
+                value={loginPassword}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
-        )}
-        
-        <div style={{ marginTop: '20px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
-            Need to verify your account?{' '}
-            <span 
-              onClick={() => window.location.href = '/verification'}
-              style={{
-                color: '#5a3215',
-                textDecoration: 'underline',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-            >
-              Verify Now
-            </span>
-          </p>
-        </div>
-      </form>
+          <button type="submit" className="login-button">
+            Login
+          </button>
+          {message && <p className="error-message">{message}</p>}
+        </form>
+      </div>
     </div>
   );
-}
+  
+}  
 
 export default Login;

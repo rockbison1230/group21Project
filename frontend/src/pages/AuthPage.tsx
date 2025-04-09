@@ -20,6 +20,10 @@ function AuthPage() {
 
           {/* Right: Form Section */}
           <div className="auth-form-section">
+            {/* Logo */}
+            <div className="auth-logo-container">
+              <img src="/images/logo.png" alt="Espresso Events Logo" className="auth-logo" />
+            </div>
             {/* Toggle */}
             <div className="auth-toggle">
               <div
